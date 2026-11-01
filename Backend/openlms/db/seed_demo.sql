@@ -173,3 +173,28 @@ INSERT INTO assignments (course_id, title, description, max_marks, due_date, cre
 SELECT @des_course_id, 'Design Sprint 1: Mobile Wireframes & Heuristics', 'Submit lo-fi wireframe sketches and accessibility audit for the e-commerce redesign project.', 100, DATE_ADD(NOW(), INTERVAL 9 DAY), @prof_id
 WHERE NOT EXISTS (SELECT 1 FROM assignments WHERE course_id = @des_course_id AND title = 'Design Sprint 1: Mobile Wireframes & Heuristics');
 
+-- 10. Seed Demo Group Chat
+INSERT INTO chat_groups (group_id, group_name, description, course_id, teacher_id, status)
+SELECT 1, 'CS-301 DSA Discussions', 'Official study and discussion group for Data Structures & Algorithms.', @course_id, @prof_id, 'ACTIVE'
+WHERE @prof_id IS NOT NULL AND @course_id IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM chat_groups WHERE group_id = 1);
+
+INSERT IGNORE INTO chat_group_members (group_id, student_id, joined_at, last_read_at)
+SELECT 1, @student1_id, NOW(), NOW() WHERE @student1_id IS NOT NULL;
+
+INSERT IGNORE INTO chat_group_members (group_id, student_id, joined_at, last_read_at)
+SELECT 1, @student2_id, NOW(), NOW() WHERE @student2_id IS NOT NULL;
+
+INSERT INTO chat_messages (message_id, group_id, sender_id, message_content, message_type, is_pinned, pinned_at, pinned_by, created_at)
+SELECT 1, 1, @prof_id, 'Welcome to the CS-301 discussion group! Please use this group to ask questions about assignments, lecture concepts, and project milestones.', 'ANNOUNCEMENT', TRUE, NOW(), @prof_id, DATE_SUB(NOW(), INTERVAL 2 DAY)
+WHERE @prof_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM chat_messages WHERE message_id = 1);
+
+INSERT INTO chat_messages (message_id, group_id, sender_id, message_content, message_type, is_pinned, created_at)
+SELECT 2, 1, @student1_id, 'Hello Professor! For Assignment 1, should our AVL tree benchmarks include random vs sequential insertions?', 'TEXT', FALSE, DATE_SUB(NOW(), INTERVAL 1 DAY)
+WHERE @student1_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM chat_messages WHERE message_id = 2);
+
+INSERT INTO chat_messages (message_id, group_id, sender_id, message_content, message_type, is_pinned, created_at)
+SELECT 3, 1, @prof_id, 'Yes Rahul, please include both! Random keys will demonstrate average case logarithmic height balance.', 'TEXT', FALSE, DATE_SUB(NOW(), INTERVAL 18 HOUR)
+WHERE @prof_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM chat_messages WHERE message_id = 3);
+
+
