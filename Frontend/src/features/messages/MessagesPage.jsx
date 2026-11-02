@@ -15,6 +15,7 @@ import {
   MessageSquare,
   AlertCircle,
   Settings,
+  ChevronLeft,
   ChevronRight,
   Info,
   Clock,
@@ -84,6 +85,7 @@ export function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(true);
+  const [mobileView, setMobileView] = useState(threadId ? 'chat' : 'list');
 
   // Real-time & Typing
   const [isWsConnected, setIsWsConnected] = useState(false);
@@ -458,11 +460,15 @@ export function MessagesPage() {
       </div>
 
       {/* Main Chat Layout Container */}
-      <div className="bg-white rounded-2xl border border-ink-border shadow-xs overflow-hidden flex h-[calc(100vh-14rem)] min-h-[580px]">
+      <div className="relative bg-white rounded-xl sm:rounded-2xl border border-ink-border shadow-xs overflow-hidden flex h-[calc(100dvh-14rem)] min-h-[480px] sm:min-h-[580px]">
         {/* ------------------------------------------------------------- */}
         {/* LEFT PANEL: Group Channels List                               */}
         {/* ------------------------------------------------------------- */}
-        <div className="w-80 shrink-0 border-r border-ink-border flex flex-col bg-slate-50/40">
+        <div
+          className={`w-full md:w-80 shrink-0 border-r border-ink-border flex flex-col bg-slate-50/40 ${
+            mobileView === 'list' ? 'flex' : 'hidden md:flex'
+          }`}
+        >
           {/* Search & Course Filter */}
           <div className="p-3.5 border-b border-ink-border bg-white space-y-2.5">
             <div className="relative">
@@ -555,6 +561,7 @@ export function MessagesPage() {
                     onClick={() => {
                       setActiveGroupId(g.groupId);
                       navigate(`/messages/${g.groupId}`, { replace: true });
+                      setMobileView('chat');
                     }}
                     className={`p-3.5 cursor-pointer transition-all flex items-start gap-3 relative ${
                       isActive
@@ -633,12 +640,20 @@ export function MessagesPage() {
         {/* ------------------------------------------------------------- */}
         {/* CENTER PANEL: Active Group Chat Window                        */}
         {/* ------------------------------------------------------------- */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div className={`flex-1 flex flex-col min-w-0 bg-white ${mobileView === 'chat' ? 'flex' : 'hidden md:flex'}`}>
           {activeGroup ? (
             <>
               {/* Chat Header */}
-              <div className="p-3.5 px-5 border-b border-ink-border bg-white flex items-center justify-between shrink-0">
+              <div className="p-3 px-3 sm:p-3.5 sm:px-5 border-b border-ink-border bg-white flex items-center justify-between gap-2 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileView('list')}
+                    className="md:hidden shrink-0 p-1.5 -ml-1 rounded-lg text-ink-muted hover:text-ink hover:bg-slate-50"
+                    title="Back to groups"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
                   <div
                     className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center font-bold text-xs shadow-xs ${
                       COLOR_CLASSES[activeGroup.groupImage] || 'bg-brand-500 text-white'
@@ -675,7 +690,7 @@ export function MessagesPage() {
 
                   {/* Teacher Management Actions */}
                   {canManage && (
-                    <div className="flex items-center gap-1.5">
+                    <div className="hidden sm:flex items-center gap-1.5">
                       <Button
                         variant="primary"
                         size="xs"
@@ -712,7 +727,7 @@ export function MessagesPage() {
                   {/* Toggle Members Drawer */}
                   <button
                     onClick={() => setShowMembersPanel(!showMembersPanel)}
-                    className={`p-1.5 rounded-lg border transition-colors ${
+                    className={`hidden md:block p-1.5 rounded-lg border transition-colors ${
                       showMembersPanel
                         ? 'bg-slate-100 text-ink border-ink-border'
                         : 'text-ink-muted hover:text-ink hover:bg-slate-50 border-transparent'
@@ -720,6 +735,16 @@ export function MessagesPage() {
                     title="Toggle Members & Details"
                   >
                     <Info className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMembersPanel(true);
+                      setMobileView('details');
+                    }}
+                    className="md:hidden p-1.5 rounded-lg border border-transparent text-ink-muted hover:text-ink hover:bg-slate-50"
+                    title="View group details"
+                  >
+                    <Users className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -746,7 +771,7 @@ export function MessagesPage() {
               )}
 
               {/* Message Feed Area */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/30">
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 space-y-4 bg-slate-50/30">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full text-xs text-ink-muted">
                     Loading conversation history...
@@ -935,7 +960,7 @@ export function MessagesPage() {
                   </div>
                 )}
 
-                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                <form onSubmit={handleSendMessage} className="flex items-end gap-1.5 sm:gap-2">
                   <div className="flex-1 relative flex items-center bg-slate-50 border border-ink-border rounded-xl focus-within:ring-2 focus-within:ring-brand-500 focus-within:bg-white transition-all">
                     <button
                       type="button"
@@ -960,7 +985,7 @@ export function MessagesPage() {
                       value={messageText}
                       onChange={handleTypingChange}
                       onKeyDown={handleKeyDown}
-                      className="w-full py-2.5 pr-3 bg-transparent text-xs text-ink placeholder:text-ink-muted focus:outline-none resize-none max-h-32 font-medium"
+                      className="w-full min-w-0 py-2.5 pr-3 bg-transparent text-xs text-ink placeholder:text-ink-muted focus:outline-none resize-none max-h-32 font-medium"
                     />
                   </div>
 
@@ -971,7 +996,7 @@ export function MessagesPage() {
                     disabled={!messageText.trim() || sending || activeGroup?.status === 'ARCHIVED'}
                     isLoading={sending}
                     icon={Send}
-                    className="h-10 px-4 rounded-xl shadow-xs"
+                    className="h-10 px-3 sm:px-4 rounded-xl shadow-xs"
                   >
                     Send
                   </Button>
@@ -1005,14 +1030,19 @@ export function MessagesPage() {
         {/* RIGHT PANEL: Group Info & Enrolled Members                    */}
         {/* ------------------------------------------------------------- */}
         {activeGroup && showMembersPanel && (
-          <div className="w-72 shrink-0 border-l border-ink-border bg-slate-50/50 flex flex-col overflow-y-auto">
+          <div className={`absolute inset-0 z-10 w-full md:static md:w-72 shrink-0 border-l border-ink-border bg-slate-50/50 flex flex-col overflow-y-auto ${
+            mobileView === 'details' ? 'flex' : 'hidden md:flex'
+          }`}>
             {/* Header */}
             <div className="p-4 border-b border-ink-border bg-white flex items-center justify-between">
               <span className="text-xs font-extrabold text-ink uppercase tracking-wider">
                 Group Details
               </span>
               <button
-                onClick={() => setShowMembersPanel(false)}
+                onClick={() => {
+                  setShowMembersPanel(false);
+                  setMobileView('chat');
+                }}
                 className="text-xs text-ink-muted hover:text-ink"
               >
                 Close

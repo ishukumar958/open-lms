@@ -22,6 +22,17 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-width: 320px;
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
   body {
     background-color: var(--page-bg);
     color: var(--text);

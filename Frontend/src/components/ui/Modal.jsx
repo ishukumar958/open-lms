@@ -16,7 +16,7 @@ export function Modal({ isOpen, onClose, title, description, children, maxWidth 
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full bg-white rounded-2xl shadow-hero border border-ink-border p-6 z-10 transition-all transform animate-in fade-in zoom-in-95 duration-200',
+          'relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl shadow-hero border border-ink-border p-4 sm:p-6 z-10 transition-all transform animate-in fade-in zoom-in-95 duration-200',
           maxWidth
         )}
       >
