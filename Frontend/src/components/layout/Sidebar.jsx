@@ -52,7 +52,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed bottom-0 left-0 right-0 w-full h-16 md:static md:w-56 md:h-screen shrink-0 bg-navy-900 text-white flex flex-col justify-between border-t md:border-t-0 md:border-r border-navy-800 z-30 select-none">
+    <aside className="dark-sidebar fixed bottom-0 left-0 right-0 w-full h-16 md:inset-y-0 md:left-0 md:right-auto md:w-56 md:h-screen shrink-0 bg-navy-900 text-white flex flex-col justify-between border-t md:border-t-0 md:border-r border-navy-800 z-30 select-none">
       {/* Brand & Top Navigation */}
       <div className="flex flex-col">
         {/* Brand Header */}
@@ -76,7 +76,10 @@ export function Sidebar() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex h-16 px-1 gap-1 overflow-x-auto md:block md:h-auto md:px-3 md:space-y-1 md:mt-1">
+        <nav
+          aria-label="Primary navigation"
+          className="flex h-16 px-1 gap-1 overflow-x-auto md:block md:h-auto md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:px-3 md:space-y-1 md:mt-1"
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
