@@ -287,7 +287,7 @@ export function EditGroupModal({ isOpen, onClose, group, onGroupUpdated, onGroup
             <p className="text-xs font-bold text-red-600 uppercase tracking-wider">Danger Zone</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {/* Archive */}
             <button
               type="button"

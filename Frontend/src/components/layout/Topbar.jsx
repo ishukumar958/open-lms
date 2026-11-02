@@ -46,9 +46,9 @@ export function Topbar({ title, subtitle }) {
 
   return (
     <>
-      <header className="h-16 px-8 border-b border-ink-border bg-white/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between">
+      <header className="min-h-16 px-4 sm:px-6 md:px-8 py-2 border-b border-ink-border bg-white/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between gap-3">
         {/* Left: Dynamic Greeting or Page Title */}
-        <div>
+        <div className="min-w-0">
           {title ? (
             <div className="flex items-baseline gap-3">
               <h1 className="text-lg font-bold text-ink tracking-tight">{title}</h1>
@@ -56,12 +56,12 @@ export function Topbar({ title, subtitle }) {
             </div>
           ) : (
             <div>
-              <h1 className="text-base font-bold text-ink tracking-tight">
+              <h1 className="text-sm sm:text-base font-bold text-ink tracking-tight truncate">
                 {role === 'PROFESSOR'
                   ? `Good morning, ${user?.name || 'Professor'}`
                   : `Good morning, ${user?.name || 'Student'} 👋`}
               </h1>
-              <p className="text-[11px] text-ink-muted">
+              <p className="hidden sm:block text-[11px] text-ink-muted truncate">
                 {role === 'PROFESSOR'
                   ? 'Faculty Academic Workspace · Active Semester'
                   : 'Student Learning Portal · Current Semester'}
@@ -71,7 +71,7 @@ export function Topbar({ title, subtitle }) {
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
           {/* User Role Badge */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200">
             {role === 'PROFESSOR' ? (
@@ -88,7 +88,7 @@ export function Topbar({ title, subtitle }) {
           </div>
 
           {/* Search Bar */}
-          <SearchInput placeholder="Search Open LMS..." />
+          <SearchInput className="hidden md:block" placeholder="Search Open LMS..." />
 
           {/* Contextual Action Button */}
           {role === 'STUDENT' ? (
@@ -99,7 +99,8 @@ export function Topbar({ title, subtitle }) {
               onClick={() => setIsJoinModalOpen(true)}
               className="font-semibold text-xs border-slate-300"
             >
-              Join a class
+              <span className="hidden sm:inline">Join a class</span>
+              <span className="sm:hidden">Join</span>
             </Button>
           ) : (
             <div className="relative">
@@ -111,7 +112,8 @@ export function Topbar({ title, subtitle }) {
                 onClick={() => setIsCreateDropdownOpen(!isCreateDropdownOpen)}
                 className="font-semibold text-xs"
               >
-                Create
+                <span className="hidden sm:inline">Create</span>
+                <span className="sm:hidden">New</span>
               </Button>
               {isCreateDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-ink-border rounded-xl shadow-hero py-1.5 z-50 text-xs">
@@ -182,7 +184,7 @@ export function Topbar({ title, subtitle }) {
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-ink-border rounded-xl shadow-hero p-3.5 z-50 text-xs">
+              <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] bg-white border border-ink-border rounded-xl shadow-hero p-3.5 z-50 text-xs">
                 <div className="flex items-center justify-between pb-2 border-b border-ink-border mb-2.5">
                   <span className="font-bold text-ink">Notifications</span>
                   <button
