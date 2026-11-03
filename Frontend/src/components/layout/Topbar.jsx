@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SearchInput } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Bell, Plus, ChevronDown, Check, Info } from 'lucide-react';
+import { Bell, Plus, ChevronDown, Check, Info, Briefcase, GraduationCap } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { joinCourse } from '../../lib/api/coursesApi';
