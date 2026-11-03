@@ -14,6 +14,9 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     List<QuizAttempt> findByStudentUserId(Long studentId);
     List<QuizAttempt> findByStudentUserIdAndQuizQuizIdIn(Long studentId, List<Long> quizIds);
     Optional<QuizAttempt> findByQuizQuizIdAndStudentUserId(Long quizId, Long studentId);
+    List<QuizAttempt> findByQuizQuizIdAndStudentUserIdOrderByAttemptIdDesc(Long quizId, Long studentId);
+    Optional<QuizAttempt> findFirstByQuizQuizIdAndStudentUserIdOrderByAttemptIdDesc(Long quizId, Long studentId);
+    Optional<QuizAttempt> findFirstByQuizQuizIdAndStudentUserIdAndStatusOrderByAttemptIdDesc(Long quizId, Long studentId, String status);
     List<QuizAttempt> findByQuizCourseCourseId(Long courseId);
     boolean existsByQuizQuizId(Long quizId);
 }

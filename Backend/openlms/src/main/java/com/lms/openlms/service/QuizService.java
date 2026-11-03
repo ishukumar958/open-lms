@@ -191,18 +191,29 @@ public class QuizService {
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
         courseAccessService.requireStudentEnrolled(quiz.getCourse().getCourseId(), studentId);
 
-        Optional<QuizAttempt> existing = quizAttemptRepository.findByQuizQuizIdAndStudentUserId(quizId, studentId);
-        if (existing.isPresent()) {
-            QuizAttempt attempt = existing.get();
-            if ("SUBMITTED".equalsIgnoreCase(attempt.getStatus())) {
-                throw new ConflictException("Quiz already attempted");
+        List<QuizAttempt> existingAttempts = quizAttemptRepository.findByQuizQuizIdAndStudentUserIdOrderByAttemptIdDesc(quizId, studentId);
+        int maxAttempts = 2;
+
+        // If there is an active IN_PROGRESS attempt, resume it
+        for (QuizAttempt qa : existingAttempts) {
+            if ("IN_PROGRESS".equalsIgnoreCase(qa.getStatus())) {
+                LocalDateTime endsAt = null;
+                if (quiz.getDurationMinutes() != null && qa.getStartedAt() != null) {
+                    endsAt = qa.getStartedAt().plusMinutes(quiz.getDurationMinutes());
+                }
+                StartAttemptResponse resp = new StartAttemptResponse(qa.getAttemptId(), quizId, "IN_PROGRESS",
+                        qa.getStartedAt(), quiz.getDurationMinutes(), endsAt);
+                int submittedCount = (int) existingAttempts.stream().filter(a -> "SUBMITTED".equalsIgnoreCase(a.getStatus())).count();
+                resp.setAttemptsUsed(submittedCount);
+                resp.setAttemptsLeft(Math.max(0, maxAttempts - submittedCount));
+                resp.setMaxAttempts(maxAttempts);
+                return resp;
             }
-            LocalDateTime endsAt = null;
-            if (quiz.getDurationMinutes() != null && attempt.getStartedAt() != null) {
-                endsAt = attempt.getStartedAt().plusMinutes(quiz.getDurationMinutes());
-            }
-            return new StartAttemptResponse(attempt.getAttemptId(), quizId, "IN_PROGRESS",
-                    attempt.getStartedAt(), quiz.getDurationMinutes(), endsAt);
+        }
+
+        int submittedCount = (int) existingAttempts.stream().filter(a -> "SUBMITTED".equalsIgnoreCase(a.getStatus())).count();
+        if (submittedCount >= maxAttempts) {
+            throw new ConflictException("Maximum attempts reached (" + maxAttempts + "/" + maxAttempts + ")");
         }
 
         User student = userRepository.findById(studentId)
@@ -220,8 +231,12 @@ public class QuizService {
             endsAt = saved.getStartedAt().plusMinutes(quiz.getDurationMinutes());
         }
 
-        return new StartAttemptResponse(saved.getAttemptId(), quizId, "IN_PROGRESS",
+        StartAttemptResponse resp = new StartAttemptResponse(saved.getAttemptId(), quizId, "IN_PROGRESS",
                 saved.getStartedAt(), quiz.getDurationMinutes(), endsAt);
+        resp.setAttemptsUsed(submittedCount);
+        resp.setAttemptsLeft(Math.max(0, maxAttempts - submittedCount));
+        resp.setMaxAttempts(maxAttempts);
+        return resp;
     }
 
     // Q6 — POST /quizzes/{quizId}/attempts/submit (STUDENT) -> 200
@@ -230,7 +245,7 @@ public class QuizService {
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
         courseAccessService.requireStudentEnrolled(quiz.getCourse().getCourseId(), studentId);
 
-        QuizAttempt attempt = quizAttemptRepository.findByQuizQuizIdAndStudentUserId(quizId, studentId)
+        QuizAttempt attempt = quizAttemptRepository.findFirstByQuizQuizIdAndStudentUserIdAndStatusOrderByAttemptIdDesc(quizId, studentId, "IN_PROGRESS")
                 .orElseThrow(() -> new ConflictException("No active attempt"));
 
         if (!"IN_PROGRESS".equalsIgnoreCase(attempt.getStatus())) {
@@ -298,7 +313,7 @@ public class QuizService {
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
         courseAccessService.requireStudentEnrolled(quiz.getCourse().getCourseId(), studentId);
 
-        QuizAttempt attempt = quizAttemptRepository.findByQuizQuizIdAndStudentUserId(quizId, studentId)
+        QuizAttempt attempt = quizAttemptRepository.findFirstByQuizQuizIdAndStudentUserIdOrderByAttemptIdDesc(quizId, studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attempt not found"));
 
         if (!"SUBMITTED".equalsIgnoreCase(attempt.getStatus())) {
@@ -310,6 +325,13 @@ public class QuizService {
             resp.setTotalMarks(quiz.getTotalMarks());
             resp.setStartedAt(attempt.getStartedAt());
             resp.setSubmittedAt(attempt.getSubmittedAt());
+
+        List<QuizAttempt> allAttempts = quizAttemptRepository.findByQuizQuizIdAndStudentUserIdOrderByAttemptIdDesc(quiz.getQuizId(), attempt.getStudent().getUserId());
+        int submittedCount = (int) allAttempts.stream().filter(a -> "SUBMITTED".equalsIgnoreCase(a.getStatus())).count();
+        int maxAttempts = 2;
+        resp.setAttemptsUsed(submittedCount);
+        resp.setAttemptsLeft(Math.max(0, maxAttempts - submittedCount));
+        resp.setMaxAttempts(maxAttempts);
             resp.setAnswers(null);
             return resp;
         }

@@ -5,7 +5,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { CompletionCertificateModal } from '../../../components/ui/CompletionCertificateModal';
 import { listCourseQuizzes, startQuizAttempt } from '../../../lib/api/quizzesApi';
 import { useAuthStore } from '../../../store/authStore';
-import { CheckCircle2, Clock, HelpCircle, Play, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Clock, HelpCircle, Play, RotateCcw , ShieldCheck} from 'lucide-react';
 
 export function QuizzesTab({ course }) {
   const navigate = useNavigate();
@@ -79,6 +79,10 @@ export function QuizzesTab({ course }) {
             const durationLabel = quiz.durationMinutes
               ? `${quiz.durationMinutes} minutes`
               : 'Untimed';
+            const scorePercent = isCompleted
+              ? Math.round(((attempt.score || 0) / (quiz.totalMarks || 1)) * 100)
+              : 0;
+            const isPassed = isCompleted && scorePercent >= 50;
 
             return (
               <div
@@ -88,9 +92,15 @@ export function QuizzesTab({ course }) {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     {isCompleted ? (
-                      <Badge variant="success" size="xs">
-                        Completed
-                      </Badge>
+                      isPassed ? (
+                        <Badge variant="success" size="xs">
+                          Passed ({scorePercent}%)
+                        </Badge>
+                      ) : (
+                        <Badge variant="danger" size="xs">
+                          Failed ({scorePercent}%)
+                        </Badge>
+                      )
                     ) : isInProgress ? (
                       <Badge variant="amber" size="xs">
                         In Progress
@@ -110,8 +120,8 @@ export function QuizzesTab({ course }) {
                   <p className="text-xs text-ink-muted mt-0.5">
                     {quiz.questionCount ?? quiz.questions?.length ?? 0} questions · {quiz.totalMarks} points
                     {isCompleted && (
-                      <strong className="text-emerald-700 ml-2 font-semibold">
-                        Score: {attempt.score} / {quiz.totalMarks} ({Math.round((attempt.score / quiz.totalMarks) * 100)}%)
+                      <strong className={isPassed ? "text-emerald-700 ml-2 font-semibold" : "text-rose-600 ml-2 font-semibold"}>
+                        Score: {attempt.score} / {quiz.totalMarks} ({scorePercent}%) - {isPassed ? 'Passed' : 'Failed'}
                       </strong>
                     )}
                   </p>
@@ -127,17 +137,29 @@ export function QuizzesTab({ course }) {
                       >
                         Review Answers
                       </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => setCertificateQuiz({
-                          ...quiz,
-                          score: attempt.score,
-                          submittedAt: attempt.submittedAt,
-                        })}
-                      >
-                        View certificate
-                      </Button>
+                      {isPassed ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={ShieldCheck}
+                          onClick={() => setCertificateQuiz({
+                            ...quiz,
+                            score: attempt.score,
+                            submittedAt: attempt.submittedAt,
+                          })}
+                        >
+                          View certificate
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate(`/student/classes/${courseId}/quizzes/${quiz.quizId}`)}
+                          className="bg-amber-500 hover:bg-amber-600 font-bold text-white"
+                        >
+                          Retake Quiz (1 attempt left)
+                        </Button>
+                      )}
                     </>
                   ) : isInProgress ? (
                     <Button

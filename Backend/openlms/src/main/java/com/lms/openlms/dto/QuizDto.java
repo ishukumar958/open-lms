@@ -389,6 +389,9 @@ public class QuizDto {
         private LocalDateTime startedAt;
         private Integer durationMinutes;
         private LocalDateTime endsAt;
+        private Integer attemptsUsed;
+        private Integer attemptsLeft;
+        private Integer maxAttempts;
 
         public StartAttemptResponse() {}
 
@@ -575,6 +578,9 @@ public class QuizDto {
         private LocalDateTime startedAt;
         private LocalDateTime submittedAt;
         private List<AttemptAnswerDetail> answers;
+        private Integer attemptsUsed;
+        private Integer attemptsLeft;
+        private Integer maxAttempts;
 
         public AttemptResultResponse() {}
 
