@@ -430,3 +430,30 @@ export async function getPinnedMessages(groupId) {
   }
   return apiRequest(`/chat/groups/${groupId}/pinned`);
 }
+
+export async function deleteMessage(groupId, messageId) {
+  if (useMocks) {
+    if (mockMessages[groupId]) {
+      mockMessages[groupId] = mockMessages[groupId].filter((x) => x.messageId !== Number(messageId));
+    }
+    const g = mockGroups.find((x) => x.groupId === Number(groupId));
+    if (g && g.lastMessage?.messageId === Number(messageId)) {
+      const remaining = mockMessages[groupId] || [];
+      const prev = remaining[remaining.length - 1];
+      g.lastMessage = prev
+        ? {
+            messageId: prev.messageId,
+            senderId: prev.senderId,
+            senderName: prev.senderName,
+            senderRole: prev.senderRole,
+            messageContent: prev.messageContent,
+            createdAt: prev.createdAt,
+          }
+        : null;
+    }
+    return null;
+  }
+  return apiRequest(`/chat/groups/${groupId}/messages/${messageId}`, {
+    method: 'DELETE',
+  });
+}

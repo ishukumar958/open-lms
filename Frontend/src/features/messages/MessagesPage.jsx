@@ -24,6 +24,7 @@ import {
   UserCheck,
   Layers,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../../components/ui/Avatar';
@@ -36,6 +37,7 @@ import {
   sendMessage,
   markAsRead,
   pinMessage,
+  deleteMessage,
 } from '../../lib/api/chatApi';
 import { chatSocket } from '../../lib/chatSocket';
 import { CreateGroupModal } from './CreateGroupModal';
@@ -236,6 +238,10 @@ export function MessagesPage() {
         );
       } else if (payload.event === 'GROUP_DELETED') {
         fetchGroups();
+      } else if (payload.event === 'MESSAGE_DELETED') {
+        const deletedId = Number(payload.data?.messageId || payload.data);
+        setMessages((prev) => prev.filter((m) => m.messageId !== deletedId));
+        setPinnedMessages((prev) => prev.filter((m) => m.messageId !== deletedId));
       } else if (payload.messageId) {
         // Direct incoming message
         const newMsg = payload;
@@ -292,6 +298,28 @@ export function MessagesPage() {
       unsubTyping();
     };
   }, [activeGroupId, user?.id]);
+
+  // Fast polling fallback: 3 seconds when disconnected, 12 seconds when connected as safety net
+  useEffect(() => {
+    if (!activeGroupId) return;
+
+    const intervalMs = isWsConnected ? 12000 : 3000;
+    const interval = setInterval(async () => {
+      try {
+        const msgs = await getGroupMessages(activeGroupId);
+        if (Array.isArray(msgs)) {
+          setMessages((prev) => {
+            if (prev.length !== msgs.length || prev[prev.length - 1]?.messageId !== msgs[msgs.length - 1]?.messageId) {
+              return msgs;
+            }
+            return prev;
+          });
+        }
+      } catch (e) {}
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }, [activeGroupId, isWsConnected]);
 
   // Auto-scroll to bottom on messages change
   useEffect(() => {
@@ -373,6 +401,18 @@ export function MessagesPage() {
       });
     } catch (err) {
       alert(err.message || 'Failed to update pin status');
+    }
+  };
+
+  // Delete message (Sender or Teacher)
+  const handleDeleteMessage = async (msg) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    try {
+      await deleteMessage(activeGroupId, msg.messageId);
+      setMessages((prev) => prev.filter((m) => m.messageId !== msg.messageId));
+      setPinnedMessages((prev) => prev.filter((m) => m.messageId !== msg.messageId));
+    } catch (err) {
+      alert(err.message || 'Failed to delete message');
     }
   };
 
@@ -888,28 +928,38 @@ export function MessagesPage() {
                                   {msg.messageContent}
                                 </div>
 
-                                {/* Teacher Hover Quick Actions: Pin / Unpin */}
-                                {canManage && (
+                                {/* Hover Quick Actions: Pin (Teacher) & Delete (Sender or Teacher) */}
+                                {(canManage || isMe) && (
                                   <div
-                                    className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] pt-0.5 ${
+                                    className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-[10px] pt-0.5 ${
                                       isMe ? 'justify-end' : 'justify-start'
                                     }`}
                                   >
+                                    {canManage && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleTogglePin(msg)}
+                                        className="inline-flex items-center gap-1 text-ink-muted hover:text-amber-700 px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                                        title={isMsgPinned ? 'Unpin message' : 'Pin announcement to top'}
+                                      >
+                                        {isMsgPinned ? (
+                                          <>
+                                            <PinOff className="w-3 h-3" /> Unpin
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Pin className="w-3 h-3" /> Pin
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => handleTogglePin(msg)}
-                                      className="inline-flex items-center gap-1 text-ink-muted hover:text-amber-700 px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors"
-                                      title={isMsgPinned ? 'Unpin message' : 'Pin announcement to top'}
+                                      onClick={() => handleDeleteMessage(msg)}
+                                      className="inline-flex items-center gap-1 text-ink-muted hover:text-rose-600 px-1.5 py-0.5 rounded hover:bg-rose-50 transition-colors"
+                                      title="Delete message"
                                     >
-                                      {isMsgPinned ? (
-                                        <>
-                                          <PinOff className="w-3 h-3" /> Unpin
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Pin className="w-3 h-3" /> Pin to top
-                                        </>
-                                      )}
+                                      <Trash2 className="w-3 h-3 text-rose-500" /> Delete
                                     </button>
                                   </div>
                                 )}

@@ -147,4 +147,13 @@ public class ChatController {
             @AuthenticationPrincipal AuthUser user) {
         return ResponseEntity.ok(chatService.getPinnedMessages(groupId, user));
     }
+
+    @DeleteMapping("/groups/{groupId}/messages/{messageId}")
+    public ResponseEntity<Void> deleteMessage(
+            @PathVariable Long groupId,
+            @PathVariable Long messageId,
+            @AuthenticationPrincipal AuthUser user) {
+        chatService.deleteMessage(groupId, messageId, user);
+        return ResponseEntity.noContent().build();
+    }
 }
