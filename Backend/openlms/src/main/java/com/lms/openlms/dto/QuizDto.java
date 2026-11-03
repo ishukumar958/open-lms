@@ -451,6 +451,30 @@ public class QuizDto {
         public void setEndsAt(LocalDateTime endsAt) {
             this.endsAt = endsAt;
         }
+
+        public Integer getAttemptsUsed() {
+            return attemptsUsed;
+        }
+
+        public void setAttemptsUsed(Integer attemptsUsed) {
+            this.attemptsUsed = attemptsUsed;
+        }
+
+        public Integer getAttemptsLeft() {
+            return attemptsLeft;
+        }
+
+        public void setAttemptsLeft(Integer attemptsLeft) {
+            this.attemptsLeft = attemptsLeft;
+        }
+
+        public Integer getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(Integer maxAttempts) {
+            this.maxAttempts = maxAttempts;
+        }
     }
 
     public static class SubmitAnswerItem {
@@ -646,6 +670,30 @@ public class QuizDto {
 
         public void setAnswers(List<AttemptAnswerDetail> answers) {
             this.answers = answers;
+        }
+
+        public Integer getAttemptsUsed() {
+            return attemptsUsed;
+        }
+
+        public void setAttemptsUsed(Integer attemptsUsed) {
+            this.attemptsUsed = attemptsUsed;
+        }
+
+        public Integer getAttemptsLeft() {
+            return attemptsLeft;
+        }
+
+        public void setAttemptsLeft(Integer attemptsLeft) {
+            this.attemptsLeft = attemptsLeft;
+        }
+
+        public Integer getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(Integer maxAttempts) {
+            this.maxAttempts = maxAttempts;
         }
     }
 
