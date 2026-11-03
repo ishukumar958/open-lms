@@ -27,12 +27,13 @@ Execute the SQL files located in `Backend/openlms/db/` in the following strict o
 | **4** | `phase2_resources.sql` | Adds `description` and `uploaded_at` columns to `resources`. |
 | **5** | `phase2_submissions.sql` | Adds `submission_text`, `file_url`, `feedback`, `submitted_at`, `graded_at` columns and unique index to `submissions`. |
 | **6** | `phase3_quizzes.sql` | Adds `duration_minutes` to `quizzes` and `started_at`, `submitted_at` to `quiz_attempts`. |
-| **7** | `seed_demo.sql` | Idempotent demo dataset: faculty (`priya.sharma@geu.edu`), students (`rahul.sharma@geu.edu`, `neha.patel@geu.edu`), course `CS-301`, assignments, submissions, resources, quiz with questions, and completed attempts. |
+| **7** | `phase4_group_chat.sql` | Creates `chat_groups`, `chat_group_members`, and `chat_messages` tables with indices and demo course discussion group. |
+| **8** | `seed_demo.sql` | Idempotent demo dataset: faculty (`priya.sharma@geu.edu`), students (`rahul.sharma@geu.edu`, `neha.patel@geu.edu`), course `CS-301`, assignments, submissions, resources, quiz with questions, and completed attempts. |
 
 ### Running via MySQL CLI (Windows PowerShell)
 
 ```powershell
-$SQL_DIR = "d:\GraphicEra\SEM 3\Project\OPEN-LMS\Backend\openlms\db"
+$SQL_DIR = "Backend\openlms\db"
 $SCRIPTS = @(
     "phase0_roles.sql",
     "phase1_courses.sql",
@@ -40,6 +41,7 @@ $SCRIPTS = @(
     "phase2_resources.sql",
     "phase2_submissions.sql",
     "phase3_quizzes.sql",
+    "phase4_group_chat.sql",
     "seed_demo.sql"
 )
 
@@ -84,6 +86,8 @@ $env:CLOUDINARY_API_SECRET="your_api_secret"
 ```
 
 The backend server listens on `http://localhost:8081` with base path `/api/v1`.
+
+On startup, `DataInitializer` also creates the demo CS-301 DSA certification quiz if it does not already exist. Restart the backend after pulling this change so the quiz is available to both the course owner and enrolled students.
 
 ### Running the Frontend
 

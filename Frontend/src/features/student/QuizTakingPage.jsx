@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
+import { printCompletionCertificate } from '../../components/ui/CompletionCertificateModal';
 import { formatTime, cn } from '../../lib/utils';
+import { useAuthStore } from '../../store/authStore';
 import {
   getQuiz,
   startQuizAttempt,
@@ -20,11 +22,14 @@ import {
   AlertTriangle,
   Award,
   ChevronLeft,
+  Printer,
+  ShieldCheck,
 } from 'lucide-react';
 
 export function QuizTakingPage() {
   const navigate = useNavigate();
   const { courseId, quizId } = useParams();
+  const user = useAuthStore((state) => state.user);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,6 +43,7 @@ export function QuizTakingPage() {
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reviewResult, setReviewResult] = useState(null);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Load quiz and attempt state
   useEffect(() => {
@@ -49,6 +55,11 @@ export function QuizTakingPage() {
         const quizData = await getQuiz(quizId);
         if (!mounted) return;
         setQuiz(quizData);
+        setAnswers({});
+        setFlagged({});
+        setCurrentIdx(0);
+        setReviewResult(null);
+        setIsCertificateOpen(false);
 
         // Try starting or resuming attempt
         let attemptData = null;
@@ -167,6 +178,7 @@ export function QuizTakingPage() {
       const res = await submitQuizAttempt(quizId, { answers: payloadAnswers });
       setReviewResult(res);
       setAttempt(res);
+      setIsCertificateOpen(true);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
       // If error is already submitted, load review
@@ -221,6 +233,18 @@ export function QuizTakingPage() {
 
   // Review helper for current question
   const reviewAnswer = reviewResult?.answers?.find((a) => a.questionId === currentQ?.questionId);
+  const scorePercent = reviewResult
+    ? Math.round(((reviewResult.score || 0) / (reviewResult.totalMarks || 1)) * 100)
+    : 0;
+  const handlePrintCertificate = () => printCompletionCertificate({
+    studentName: user?.name,
+    courseName: quiz.courseName,
+    courseCode: quiz.courseCode,
+    quizTitle: quiz.title,
+    score: reviewResult?.score,
+    totalMarks: reviewResult?.totalMarks || quiz.totalMarks,
+    submittedAt: reviewResult?.submittedAt,
+  });
 
   return (
     <div className="min-h-screen bg-page flex flex-col select-none">
@@ -287,13 +311,21 @@ export function QuizTakingPage() {
             <div>
               <p className="text-xs font-bold text-emerald-900">
                 Quiz Completed · Final Score: {reviewResult.score} / {reviewResult.totalMarks} (
-                {Math.round(((reviewResult.score || 0) / (reviewResult.totalMarks || 1)) * 100)}%)
+                {scorePercent}%)
               </p>
               <p className="text-[11px] text-emerald-700">
                 Review your responses and correct answers below.
               </p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={ShieldCheck}
+            onClick={() => setIsCertificateOpen(true)}
+          >
+            View certificate
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -530,7 +562,7 @@ export function QuizTakingPage() {
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
                 {reviewResult
-                  ? `You scored ${reviewResult.score} out of ${reviewResult.totalMarks} possible marks.`
+                  ? `You scored ${reviewResult.score} out of ${reviewResult.totalMarks} possible marks (${scorePercent}%).`
                   : `You've answered ${answeredCount} of ${questions.length} questions. Unanswered questions will receive 0 marks.`}
               </p>
             </div>
@@ -652,6 +684,68 @@ export function QuizTakingPage() {
           </Button>
         </div>
       </Modal>
+
+      {reviewResult && (
+        <Modal
+          isOpen={isCertificateOpen}
+          onClose={() => setIsCertificateOpen(false)}
+          title="Certificate of completion"
+          description="Your certificate is ready to print or save as a PDF."
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-4">
+            <div
+              id="completion-certificate"
+              className="relative overflow-hidden rounded-2xl border-2 border-brand-200 bg-gradient-to-br from-white via-brand-50/40 to-violet-50 p-6 sm:p-10 text-center"
+            >
+              <div className="absolute -top-16 -right-16 h-36 w-36 rounded-full bg-brand-100/60" />
+              <div className="absolute -bottom-20 -left-16 h-40 w-40 rounded-full bg-violet-100/60" />
+              <div className="relative">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg">
+                  <Award className="h-7 w-7" />
+                </div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-brand-700">
+                  Open LMS · Certificate of Completion
+                </p>
+                <h2 className="mt-5 text-2xl font-bold tracking-tight text-navy-900">
+                  {user?.name || 'Student'}
+                </h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-muted">
+                  has successfully completed the assessment
+                </p>
+                <p className="mt-2 text-lg font-bold text-ink">{quiz.title}</p>
+                <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-brand-100 bg-white/80 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Score</p>
+                    <p className="mt-1 text-lg font-bold text-brand-700">
+                      {reviewResult.score} / {reviewResult.totalMarks}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-brand-100 bg-white/80 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Percentage</p>
+                    <p className="mt-1 text-lg font-bold text-emerald-700">{scorePercent}%</p>
+                  </div>
+                </div>
+                <p className="mt-6 text-xs text-ink-muted">
+                  Completed on {new Date(reviewResult.submittedAt || Date.now()).toLocaleDateString([], {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+              <Button variant="outline" size="sm" onClick={() => setIsCertificateOpen(false)}>
+                Close
+              </Button>
+              <Button variant="primary" size="sm" icon={Printer} onClick={handlePrintCertificate}>
+                Download / Save PDF
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

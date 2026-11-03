@@ -449,7 +449,7 @@ Developed as part of the **MCA 3rd Semester Project-Based Learning (PBL)** curri
 ### 🌟 Core Contributors
 - **Navdeep Bhatt** ([@Navdeepbhatt08](https://github.com/Navdeepbhatt08))
 - **Mayank Kumar** ([@mayank78geu](https://github.com/mayank78geu))
-- **Jatin Kadiyan**
+- **Jatin Kadiyan**([@jkadiyan](https://github.com/jkadiyan))
 - **Ishu Kumar** ([@ishukumar958](https://github.com/ishukumar958))
 
 ---
