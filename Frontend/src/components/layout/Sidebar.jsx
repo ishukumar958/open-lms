@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   Home,
   BookOpen,
@@ -26,7 +26,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const isProf = role === 'PROFESSOR' || role === 'FACULTY';
+  const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
 
   const studentNav = [
     { label: 'Home', to: '/student/home', icon: Home },

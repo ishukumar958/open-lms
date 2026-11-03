@@ -15,6 +15,13 @@ export function StudentSignupPage() {
   const isProfessor = location.pathname.includes('professor') || location.pathname.includes('teacher');
   const roleName = isProfessor ? 'FACULTY' : 'STUDENT';
 
+  React.useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const isProf = isProfessor || roleName === 'FACULTY' || currentUser?.role === 'FACULTY' || currentUser?.role === 'PROFESSOR';
+      navigate(isProf ? '/professor/overview' : '/student/home', { replace: true });
+    }
+  }, [isAuthenticated, currentUser, isProfessor, roleName, navigate]);
+
   const allowedDomain = import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN;
   const defaultDomain = allowedDomain || 'geu.edu';
 

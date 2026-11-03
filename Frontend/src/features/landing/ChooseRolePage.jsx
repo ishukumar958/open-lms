@@ -7,6 +7,14 @@ import { useAuthStore } from '../../store/authStore';
 export function ChooseRolePage() {
   const [selectedRole, setSelectedRole] = useState('STUDENT');
   const navigate = useNavigate();
+  const { isAuthenticated, user, role } = useAuthStore();
+
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
+      navigate(isProf ? '/professor/overview' : '/student/home', { replace: true });
+    }
+  }, [isAuthenticated, user, role, navigate]);
   const handleContinue = (role) => {
     if (role === 'STUDENT') {
       navigate('/signup/student');

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { useAuthStore } from '../../store/authStore';
 import {
   ArrowRight,
   BookOpen,
@@ -13,10 +14,16 @@ import {
   Shield,
   Layers,
   Award,
+  GraduationCap,
+  Briefcase,
+  LogOut,
 } from 'lucide-react';
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, user, role, logout } = useAuthStore();
+  const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
+  const dashboardPath = isProf ? '/professor/overview' : '/student/home';
 
   return (
     <div className="min-h-screen bg-white text-ink flex flex-col">
@@ -60,21 +67,58 @@ export function LandingPage() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-4">
-            <Link
-              to="/login"
-              className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-2 py-1"
-            >
-              Sign in
-            </Link>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => navigate('/choose-role')}
-              className="rounded-full shadow-brand font-semibold text-xs px-5"
-            >
-              Get started
-            </Button>
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-ink truncate max-w-[140px]">
+                    {user?.name || (isProf ? 'Professor' : 'Student')}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-50 text-brand-700">
+                    {isProf ? 'Faculty' : 'Student'}
+                  </span>
+                </div>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => navigate(dashboardPath)}
+                  className="rounded-full shadow-brand font-semibold text-xs px-5"
+                  iconRight={ArrowRight}
+                >
+                  Dashboard
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="text-xs font-semibold text-ink-muted hover:text-rose-600 transition-colors px-2 py-1 flex items-center gap-1"
+                  title="Sign out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-2 py-1"
+                >
+                  Sign in
+                </Link>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => navigate('/choose-role')}
+                  className="rounded-full shadow-brand font-semibold text-xs px-5"
+                >
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -100,15 +144,27 @@ export function LandingPage() {
             </p>
 
             <div className="flex flex-wrap items-center gap-3.5 pt-2">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => navigate('/choose-role')}
-                className="rounded-full shadow-hero px-7 font-semibold"
-                iconRight={ArrowRight}
-              >
-                Start learning
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => navigate(dashboardPath)}
+                  className="rounded-full shadow-hero px-7 font-semibold"
+                  iconRight={ArrowRight}
+                >
+                  Go to {isProf ? 'Faculty' : 'Student'} Dashboard
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => navigate('/choose-role')}
+                  className="rounded-full shadow-hero px-7 font-semibold"
+                  iconRight={ArrowRight}
+                >
+                  Start learning
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="lg"
@@ -159,8 +215,12 @@ export function LandingPage() {
 
               {/* Greeting */}
               <div className="pt-4">
-                <p className="text-sm font-bold text-ink">Good morning, Rahul 👋</p>
-                <p className="text-[11px] text-ink-muted">Graphic Era · Computer Science</p>
+                <p className="text-sm font-bold text-ink">
+                  Good morning, {isAuthenticated && user?.name ? user.name.split(' ')[0] : 'Rahul'} 👋
+                </p>
+                <p className="text-[11px] text-ink-muted">
+                  Graphic Era · {isProf ? 'Faculty Academic Workspace' : 'Computer Science'}
+                </p>
               </div>
 
               {/* Mini Stat Tiles */}

@@ -9,6 +9,7 @@ import { joinCourse } from '../../lib/api/coursesApi';
 
 export function Topbar({ title, subtitle }) {
   const { role, user } = useAuthStore();
+  const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
   const navigate = useNavigate();
 
   // Modals & popovers state
@@ -57,12 +58,12 @@ export function Topbar({ title, subtitle }) {
           ) : (
             <div>
               <h1 className="text-base font-bold text-ink tracking-tight">
-                {role === 'PROFESSOR'
+                {isProf
                   ? `Good morning, ${user?.name || 'Professor'}`
                   : `Good morning, ${user?.name || 'Student'} 👋`}
               </h1>
               <p className="text-[11px] text-ink-muted">
-                {role === 'PROFESSOR'
+                {isProf
                   ? 'Faculty Academic Workspace · Active Semester'
                   : 'Student Learning Portal · Current Semester'}
               </p>
@@ -74,7 +75,7 @@ export function Topbar({ title, subtitle }) {
         <div className="flex items-center gap-3.5">
           {/* User Role Badge */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200">
-            {role === 'PROFESSOR' ? (
+            {isProf ? (
               <>
                 <Briefcase className="w-3.5 h-3.5" />
                 <span>Faculty Workspace</span>
@@ -91,7 +92,7 @@ export function Topbar({ title, subtitle }) {
           <SearchInput placeholder="Search Open LMS..." />
 
           {/* Contextual Action Button */}
-          {role === 'STUDENT' ? (
+          {!isProf ? (
             <Button
               variant="outline"
               size="sm"
@@ -198,7 +199,7 @@ export function Topbar({ title, subtitle }) {
                       <span>Welcome to Open LMS!</span> 👋
                     </p>
                     <p className="text-[11px] text-brand-800 mt-1 leading-relaxed">
-                      {role === 'PROFESSOR'
+                      {isProf
                         ? 'Your teaching portal is active. Create courses, upload study resources, and manage student submissions.'
                         : 'Your student account is active. Use the "+ Join a class" button above with your instructor\'s class code to enroll.'}
                     </p>
@@ -208,7 +209,7 @@ export function Topbar({ title, subtitle }) {
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-ink">
                     <p className="font-bold text-xs text-slate-900">Academic Account Verified</p>
                     <p className="text-[11px] text-ink-muted mt-1 leading-relaxed">
-                      Signed in as <span className="font-semibold text-slate-700">{user?.email || 'authenticated user'}</span> ({role === 'PROFESSOR' ? 'Faculty' : 'Student'}).
+                      Signed in as <span className="font-semibold text-slate-700">{user?.email || 'authenticated user'}</span> ({isProf ? 'Faculty' : 'Student'}).
                     </p>
                     <span className="text-[10px] text-ink-muted font-medium block mt-1.5">Today</span>
                   </div>
