@@ -15,6 +15,8 @@ import com.lms.openlms.repository.ChatGroupRepository;
 import com.lms.openlms.repository.ChatMessageRepository;
 import com.lms.openlms.repository.CourseRepository;
 import com.lms.openlms.repository.EnrollmentRepository;
+import com.lms.openlms.repository.QuizAnswerRepository;
+import com.lms.openlms.repository.QuizAttemptRepository;
 import com.lms.openlms.repository.QuizRepository;
 import com.lms.openlms.repository.RoleRepository;
 import com.lms.openlms.repository.UserRepository;
@@ -31,6 +33,8 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final QuizAnswerRepository quizAnswerRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
     private final QuizRepository quizRepository;
     private final ChatGroupRepository chatGroupRepository;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
@@ -41,6 +45,8 @@ public class DataInitializer implements CommandLineRunner {
                            UserRepository userRepository,
                            CourseRepository courseRepository,
                            EnrollmentRepository enrollmentRepository,
+                           QuizAnswerRepository quizAnswerRepository,
+                           QuizAttemptRepository quizAttemptRepository,
                            QuizRepository quizRepository,
                            ChatGroupRepository chatGroupRepository,
                            ChatGroupMemberRepository chatGroupMemberRepository,
@@ -50,6 +56,8 @@ public class DataInitializer implements CommandLineRunner {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.quizAnswerRepository = quizAnswerRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
         this.quizRepository = quizRepository;
         this.chatGroupRepository = chatGroupRepository;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
@@ -130,8 +138,7 @@ public class DataInitializer implements CommandLineRunner {
             enrollmentRepository.save(new Enrollment(course, student2));
         }
 
-        seedDsaCertificationQuiz(course, prof);
-        seedLinkedListQuiz(course, prof);
+        resetAndSeedDsaQuizzes(course, prof);
 
         // 5. Initial Demo Group Chat
         if (chatGroupRepository.count() == 0) {
@@ -182,83 +189,48 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void seedDsaCertificationQuiz(Course course, User professor) {
-        String title = "DSA Mastery Quiz: Core Data Structures & Algorithms";
-        boolean alreadyExists = quizRepository.findByCourseCourseId(course.getCourseId()).stream()
-                .anyMatch(quiz -> title.equals(quiz.getTitle()));
-        if (alreadyExists) {
+    private void resetAndSeedDsaQuizzes(Course course, User professor) {
+        String firstTitle = "DSA Basics: Data Structures";
+        String secondTitle = "DSA Basics: Algorithms";
+        var existingQuizzes = quizRepository.findByCourseCourseId(course.getCourseId());
+        boolean hasFreshQuizzes = existingQuizzes.size() == 2
+                && existingQuizzes.stream()
+                .anyMatch(quiz -> firstTitle.equals(quiz.getTitle()))
+                && existingQuizzes.stream().anyMatch(quiz -> secondTitle.equals(quiz.getTitle()));
+        if (hasFreshQuizzes) {
             return;
         }
 
-        String[][] questions = {
-                {"Which data structure provides LIFO access?", "Queue", "Stack", "Heap", "Graph", "1"},
-                {"What is the average-case lookup time in a hash table?", "O(n)", "O(log n)", "O(1)", "O(n log n)", "2"},
-                {"Which traversal visits a binary search tree in sorted order?", "Preorder", "Inorder", "Postorder", "Level order", "1"},
-                {"What is the time complexity of binary search on a sorted array?", "O(1)", "O(n)", "O(log n)", "O(n log n)", "2"},
-                {"Which data structure is best suited for breadth-first search?", "Stack", "Queue", "Heap", "Set", "1"},
-                {"What is the worst-case time complexity of quicksort?", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "3"},
-                {"Which algorithm finds the shortest path with non-negative edge weights?", "Kruskal", "Dijkstra", "Prim", "Floyd only", "1"},
-                {"What is the space complexity of an adjacency matrix for V vertices?", "O(V)", "O(log V)", "O(V²)", "O(E)", "2"},
-                {"Which sorting algorithm is stable by default?", "Heap sort", "Merge sort", "Selection sort", "Quick sort", "1"},
-                {"What does a queue follow?", "LIFO", "FIFO", "Random access", "Priority only", "1"},
-                {"What is the root of a min-heap?", "The maximum element", "The minimum element", "The median element", "Always zero", "1"},
-                {"Which technique solves overlapping subproblems by storing results?", "Backtracking", "Dynamic programming", "Greedy search", "Hashing only", "1"},
-                {"What is the time complexity of inserting at the head of a linked list?", "O(1)", "O(log n)", "O(n)", "O(n²)", "0"},
-                {"Which graph traversal can detect a cycle in a directed graph using colors?", "Breadth-first search", "Depth-first search", "Prim's algorithm", "Binary search", "1"},
-                {"What is the maximum number of children of a binary tree node?", "1", "2", "3", "Unlimited", "1"},
-                {"Which sorting algorithm repeatedly selects the minimum remaining item?", "Insertion sort", "Selection sort", "Merge sort", "Radix sort", "1"},
-                {"What is the worst-case height of an unbalanced binary search tree with n nodes?", "O(1)", "O(log n)", "O(n)", "O(n log n)", "2"},
-                {"Which data structure is used by a recursive function call stack?", "Queue", "Stack", "Graph", "Heap", "1"},
-                {"What is the time complexity of merging two sorted arrays of sizes n and m?", "O(1)", "O(log(n + m))", "O(n + m)", "O(nm)", "2"},
-                {"Which notation describes an asymptotic upper bound?", "Big Omega", "Big Theta", "Big O", "Little o", "2"}
-        };
+        existingQuizzes.forEach(quiz -> {
+            quizAttemptRepository.findByQuizQuizId(quiz.getQuizId()).forEach(attempt -> {
+                quizAnswerRepository.deleteAll(quizAnswerRepository.findByAttemptAttemptId(attempt.getAttemptId()));
+                quizAttemptRepository.delete(attempt);
+            });
+            quizRepository.delete(quiz);
+        });
 
-        Quiz quiz = new Quiz();
-        quiz.setCourse(course);
-        quiz.setTitle(title);
-        quiz.setDurationMinutes(30);
-        quiz.setTotalMarks(questions.length);
-        quiz.setCreatedBy(professor);
-
-        for (String[] questionData : questions) {
-            QuizQuestion question = new QuizQuestion();
-            question.setQuiz(quiz);
-            question.setQuestionText(questionData[0]);
-            question.setMarks(1);
-
-            for (int optionIndex = 1; optionIndex <= 4; optionIndex++) {
-                QuizOption option = new QuizOption();
-                option.setQuestion(question);
-                option.setOptionText(questionData[optionIndex]);
-                option.setIsCorrect(Integer.toString(optionIndex - 1).equals(questionData[5]));
-                question.getOptions().add(option);
-            }
-            quiz.getQuestions().add(question);
-        }
-
-        quizRepository.save(quiz);
+        seedQuiz(course, professor, firstTitle, 15, new String[][] {
+                {"Which data structure provides LIFO access?", "Queue", "Stack", "1"},
+                {"What is the average-case lookup time in a hash table?", "O(n)", "O(1)", "1"},
+                {"Which traversal visits a binary search tree in sorted order?", "Preorder", "Inorder", "1"},
+                {"What is the time complexity of binary search on a sorted array?", "O(n)", "O(log n)", "1"},
+                {"Which data structure is best suited for breadth-first search?", "Stack", "Queue", "1"}
+        });
+        seedQuiz(course, professor, secondTitle, 15, new String[][] {
+                {"What is the worst-case time complexity of quicksort?", "O(n)", "O(n²)", "1"},
+                {"Which algorithm finds shortest paths with non-negative edge weights?", "Dijkstra", "Kruskal", "0"},
+                {"What is the space complexity of an adjacency matrix for V vertices?", "O(V)", "O(V²)", "1"},
+                {"Which sorting algorithm is stable by default?", "Heap sort", "Merge sort", "1"},
+                {"What does a queue follow?", "LIFO", "FIFO", "1"}
+        });
     }
 
-    private void seedLinkedListQuiz(Course course, User professor) {
-        String title = "Linked List Fundamentals Quiz";
-        boolean alreadyExists = quizRepository.findByCourseCourseId(course.getCourseId()).stream()
-                .anyMatch(quiz -> title.equals(quiz.getTitle()));
-        if (alreadyExists) {
-            return;
-        }
-
-        String[][] questions = {
-                {"Which pointer usually identifies the first node in a linked list?", "Tail", "Head", "Middle", "Root", "1"},
-                {"What is the time complexity of inserting a node at the beginning of a singly linked list?", "O(1)", "O(log n)", "O(n)", "O(n²)", "0"},
-                {"What does the next pointer of the last node in a singly linked list contain?", "The head node", "The previous node", "Null", "The list size", "2"},
-                {"Which linked list allows traversal in both forward and backward directions?", "Singly linked list", "Circular singly linked list", "Doubly linked list", "Static array", "2"},
-                {"What is required to traverse every node in a linked list?", "Binary search", "Following next references", "Heapifying", "Hashing", "1"}
-        };
-
+    private void seedQuiz(Course course, User professor, String title, int durationMinutes,
+                          String[][] questions) {
         Quiz quiz = new Quiz();
         quiz.setCourse(course);
         quiz.setTitle(title);
-        quiz.setDurationMinutes(10);
+        quiz.setDurationMinutes(durationMinutes);
         quiz.setTotalMarks(questions.length);
         quiz.setCreatedBy(professor);
 
@@ -268,11 +240,11 @@ public class DataInitializer implements CommandLineRunner {
             question.setQuestionText(questionData[0]);
             question.setMarks(1);
 
-            for (int optionIndex = 1; optionIndex <= 4; optionIndex++) {
+            for (int optionIndex = 1; optionIndex <= 2; optionIndex++) {
                 QuizOption option = new QuizOption();
                 option.setQuestion(question);
                 option.setOptionText(questionData[optionIndex]);
-                option.setIsCorrect(Integer.toString(optionIndex - 1).equals(questionData[5]));
+                option.setIsCorrect(Integer.toString(optionIndex - 1).equals(questionData[3]));
                 question.getOptions().add(option);
             }
             quiz.getQuestions().add(question);

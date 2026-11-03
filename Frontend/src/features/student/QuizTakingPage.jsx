@@ -55,6 +55,11 @@ export function QuizTakingPage() {
         const quizData = await getQuiz(quizId);
         if (!mounted) return;
         setQuiz(quizData);
+        setAnswers({});
+        setFlagged({});
+        setCurrentIdx(0);
+        setReviewResult(null);
+        setIsCertificateOpen(false);
 
         // Try starting or resuming attempt
         let attemptData = null;
@@ -67,7 +72,6 @@ export function QuizTakingPage() {
             if (mounted) {
               setAttempt(myAttempt);
               setReviewResult(myAttempt);
-              setIsCertificateOpen(true);
               setLoading(false);
             }
             return;

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
+import { CompletionCertificateModal } from '../../../components/ui/CompletionCertificateModal';
 import { listCourseQuizzes, startQuizAttempt } from '../../../lib/api/quizzesApi';
+import { useAuthStore } from '../../../store/authStore';
 import { CheckCircle2, Clock, HelpCircle, Play, RotateCcw } from 'lucide-react';
 
 export function QuizzesTab({ course }) {
@@ -11,6 +13,8 @@ export function QuizzesTab({ course }) {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startingQuizId, setStartingQuizId] = useState(null);
+  const [certificateQuiz, setCertificateQuiz] = useState(null);
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     if (!courseId) return;
@@ -115,13 +119,26 @@ export function QuizzesTab({ course }) {
 
                 <div className="shrink-0 flex items-center gap-2">
                   {isCompleted ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/student/classes/${courseId}/quizzes/${quiz.quizId}`)}
-                    >
-                      Review Answers
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/student/classes/${courseId}/quizzes/${quiz.quizId}`)}
+                      >
+                        Review Answers
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setCertificateQuiz({
+                          ...quiz,
+                          score: attempt.score,
+                          submittedAt: attempt.submittedAt,
+                        })}
+                      >
+                        View certificate
+                      </Button>
+                    </>
                   ) : isInProgress ? (
                     <Button
                       variant="primary"
@@ -148,6 +165,16 @@ export function QuizzesTab({ course }) {
           })}
         </div>
       )}
+
+      <CompletionCertificateModal
+        isOpen={Boolean(certificateQuiz)}
+        onClose={() => setCertificateQuiz(null)}
+        studentName={user?.name}
+        courseName={course?.courseName || course?.title}
+        courseCode={course?.courseCode}
+        quiz={certificateQuiz}
+        submittedAt={certificateQuiz?.submittedAt}
+      />
     </div>
   );
 }
