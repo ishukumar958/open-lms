@@ -25,6 +25,10 @@ import {
   Layers,
   UserPlus,
   Trash2,
+  Reply,
+  Copy,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../../components/ui/Avatar';
@@ -88,6 +92,22 @@ export function MessagesPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(true);
   const [mobileView, setMobileView] = useState(threadId ? 'chat' : 'list');
+
+  // WhatsApp-Style Features State
+  const [messageCache, setMessageCache] = useState({});
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const [isChatSearchOpen, setIsChatSearchOpen] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const chatScrollContainerRef = useRef(null);
+  const [reactions, setReactions] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('openlms_chat_reactions') || '{}');
+    } catch {
+      return {};
+    }
+  });
 
   // Real-time & Typing
   const [isWsConnected, setIsWsConnected] = useState(false);
@@ -170,7 +190,7 @@ export function MessagesPage() {
     }
   }, [threadId]);
 
-  // 3. Load active group details, messages, and members
+  // 3. Instant Cache + Async Load active group details, messages, and members
   useEffect(() => {
     if (!activeGroupId) {
       setActiveGroup(null);
@@ -185,33 +205,54 @@ export function MessagesPage() {
       setActiveGroup(currentGrp);
     }
 
-    setLoadingMessages(true);
-    setTypingUsers(new Set());
+    // Zero delay: Show cached conversation immediately if available!
+    const cached = messageCache[activeGroupId];
+    if (cached && cached.length > 0) {
+      setMessages(cached);
+      setPinnedMessages(cached.filter((m) => m.isPinned));
+      setLoadingMessages(false);
+    } else {
+      setLoadingMessages(true);
+    }
 
-    Promise.all([
-      getGroupDetails(activeGroupId),
-      getGroupMessages(activeGroupId),
-      getGroupMembers(activeGroupId),
-    ])
-      .then(([groupDetails, msgs, mbrs]) => {
-        setActiveGroup(groupDetails);
+    setTypingUsers(new Set());
+    setReplyingTo(null);
+
+    // 1. Fetch messages first and immediately show them
+    getGroupMessages(activeGroupId)
+      .then((msgs) => {
         const msgList = Array.isArray(msgs) ? msgs : [];
         setMessages(msgList);
-        setMembers(Array.isArray(mbrs) ? mbrs : []);
+        setMessageCache((prev) => ({ ...prev, [activeGroupId]: msgList }));
         setPinnedMessages(msgList.filter((m) => m.isPinned));
-
-        // Mark as read
-        markAsRead(activeGroupId).catch(() => {});
-        setGroups((prev) =>
-          prev.map((g) => (g.groupId === activeGroupId ? { ...g, unreadCount: 0 } : g))
-        );
       })
-      .catch((err) => {
-        console.error('Failed to load group data:', err);
-      })
+      .catch((err) => console.error('Failed to load messages:', err))
       .finally(() => {
         setLoadingMessages(false);
       });
+
+    // 2. Fetch group details & members concurrently without blocking message view
+    getGroupDetails(activeGroupId)
+      .then((details) => {
+        if (details) setActiveGroup(details);
+      })
+      .catch(() => {});
+
+    getGroupMembers(activeGroupId)
+      .then((mbrs) => {
+        setMembers(Array.isArray(mbrs) ? mbrs : []);
+      })
+      .catch(() => {});
+
+    // 3. Mark as read and notify sidebar to clear unread badge
+    markAsRead(activeGroupId)
+      .then(() => {
+        setGroups((prev) =>
+          prev.map((g) => (g.groupId === activeGroupId ? { ...g, unreadCount: 0 } : g))
+        );
+        window.dispatchEvent(new Event('chat_read_updated'));
+      })
+      .catch(() => {});
   }, [activeGroupId]);
 
   // 4. Real-time STOMP Subscription for active group
@@ -414,6 +455,58 @@ export function MessagesPage() {
     } catch (err) {
       alert(err.message || 'Failed to delete message');
     }
+  };
+
+  // WhatsApp Reaction Handler
+  const handleToggleReaction = (msgId, emoji) => {
+    setReactions((prev) => {
+      const msgReactions = { ...(prev[msgId] || {}) };
+      const userList = msgReactions[emoji] || [];
+      const myId = user?.id || 1;
+      const exists = userList.includes(myId);
+
+      if (exists) {
+        msgReactions[emoji] = userList.filter((id) => id !== myId);
+        if (msgReactions[emoji].length === 0) delete msgReactions[emoji];
+      } else {
+        msgReactions[emoji] = [...userList, myId];
+      }
+
+      const updated = { ...prev, [msgId]: msgReactions };
+      try {
+        localStorage.setItem('openlms_chat_reactions', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  // WhatsApp Copy Message Handler
+  const handleCopyMessage = (msg) => {
+    if (!msg?.messageContent) return;
+    navigator.clipboard.writeText(msg.messageContent);
+    setCopiedId(msg.messageId);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  // WhatsApp Scroll Tracking
+  const handleChatScroll = (e) => {
+    const el = e.currentTarget;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollDown(distanceToBottom > 160);
+  };
+
+  // WhatsApp Helper: parse quoted reply
+  const parseQuotedMessage = (content) => {
+    if (!content || !content.startsWith('[quote: ')) return null;
+    const endIdx = content.indexOf(']\n');
+    if (endIdx === -1) return null;
+    const header = content.substring(8, endIdx);
+    const body = content.substring(endIdx + 2);
+    const colonIdx = header.indexOf(': "');
+    if (colonIdx === -1) return { author: 'Reply', snippet: header, body };
+    const author = header.substring(0, colonIdx);
+    const snippet = header.substring(colonIdx + 3, header.length - 1);
+    return { author, snippet, body };
   };
 
   const insertEmoji = (emoji) => {
