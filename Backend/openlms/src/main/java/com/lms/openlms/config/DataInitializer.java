@@ -5,6 +5,9 @@ import com.lms.openlms.entity.ChatGroupMember;
 import com.lms.openlms.entity.ChatMessage;
 import com.lms.openlms.entity.Course;
 import com.lms.openlms.entity.Enrollment;
+import com.lms.openlms.entity.Quiz;
+import com.lms.openlms.entity.QuizOption;
+import com.lms.openlms.entity.QuizQuestion;
 import com.lms.openlms.entity.Role;
 import com.lms.openlms.entity.User;
 import com.lms.openlms.repository.ChatGroupMemberRepository;
@@ -12,6 +15,7 @@ import com.lms.openlms.repository.ChatGroupRepository;
 import com.lms.openlms.repository.ChatMessageRepository;
 import com.lms.openlms.repository.CourseRepository;
 import com.lms.openlms.repository.EnrollmentRepository;
+import com.lms.openlms.repository.QuizRepository;
 import com.lms.openlms.repository.RoleRepository;
 import com.lms.openlms.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -27,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final QuizRepository quizRepository;
     private final ChatGroupRepository chatGroupRepository;
     private final ChatGroupMemberRepository chatGroupMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -36,6 +41,7 @@ public class DataInitializer implements CommandLineRunner {
                            UserRepository userRepository,
                            CourseRepository courseRepository,
                            EnrollmentRepository enrollmentRepository,
+                           QuizRepository quizRepository,
                            ChatGroupRepository chatGroupRepository,
                            ChatGroupMemberRepository chatGroupMemberRepository,
                            ChatMessageRepository chatMessageRepository,
@@ -44,6 +50,7 @@ public class DataInitializer implements CommandLineRunner {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.quizRepository = quizRepository;
         this.chatGroupRepository = chatGroupRepository;
         this.chatGroupMemberRepository = chatGroupMemberRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -123,6 +130,9 @@ public class DataInitializer implements CommandLineRunner {
             enrollmentRepository.save(new Enrollment(course, student2));
         }
 
+        seedDsaCertificationQuiz(course, prof);
+        seedLinkedListQuiz(course, prof);
+
         // 5. Initial Demo Group Chat
         if (chatGroupRepository.count() == 0) {
             ChatGroup group = new ChatGroup();
@@ -170,5 +180,104 @@ public class DataInitializer implements CommandLineRunner {
             msg3.setCreatedAt(LocalDateTime.now().minusHours(2));
             chatMessageRepository.save(msg3);
         }
+    }
+
+    private void seedDsaCertificationQuiz(Course course, User professor) {
+        String title = "DSA Mastery Quiz: Core Data Structures & Algorithms";
+        boolean alreadyExists = quizRepository.findByCourseCourseId(course.getCourseId()).stream()
+                .anyMatch(quiz -> title.equals(quiz.getTitle()));
+        if (alreadyExists) {
+            return;
+        }
+
+        String[][] questions = {
+                {"Which data structure provides LIFO access?", "Queue", "Stack", "Heap", "Graph", "1"},
+                {"What is the average-case lookup time in a hash table?", "O(n)", "O(log n)", "O(1)", "O(n log n)", "2"},
+                {"Which traversal visits a binary search tree in sorted order?", "Preorder", "Inorder", "Postorder", "Level order", "1"},
+                {"What is the time complexity of binary search on a sorted array?", "O(1)", "O(n)", "O(log n)", "O(n log n)", "2"},
+                {"Which data structure is best suited for breadth-first search?", "Stack", "Queue", "Heap", "Set", "1"},
+                {"What is the worst-case time complexity of quicksort?", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "3"},
+                {"Which algorithm finds the shortest path with non-negative edge weights?", "Kruskal", "Dijkstra", "Prim", "Floyd only", "1"},
+                {"What is the space complexity of an adjacency matrix for V vertices?", "O(V)", "O(log V)", "O(V²)", "O(E)", "2"},
+                {"Which sorting algorithm is stable by default?", "Heap sort", "Merge sort", "Selection sort", "Quick sort", "1"},
+                {"What does a queue follow?", "LIFO", "FIFO", "Random access", "Priority only", "1"},
+                {"What is the root of a min-heap?", "The maximum element", "The minimum element", "The median element", "Always zero", "1"},
+                {"Which technique solves overlapping subproblems by storing results?", "Backtracking", "Dynamic programming", "Greedy search", "Hashing only", "1"},
+                {"What is the time complexity of inserting at the head of a linked list?", "O(1)", "O(log n)", "O(n)", "O(n²)", "0"},
+                {"Which graph traversal can detect a cycle in a directed graph using colors?", "Breadth-first search", "Depth-first search", "Prim's algorithm", "Binary search", "1"},
+                {"What is the maximum number of children of a binary tree node?", "1", "2", "3", "Unlimited", "1"},
+                {"Which sorting algorithm repeatedly selects the minimum remaining item?", "Insertion sort", "Selection sort", "Merge sort", "Radix sort", "1"},
+                {"What is the worst-case height of an unbalanced binary search tree with n nodes?", "O(1)", "O(log n)", "O(n)", "O(n log n)", "2"},
+                {"Which data structure is used by a recursive function call stack?", "Queue", "Stack", "Graph", "Heap", "1"},
+                {"What is the time complexity of merging two sorted arrays of sizes n and m?", "O(1)", "O(log(n + m))", "O(n + m)", "O(nm)", "2"},
+                {"Which notation describes an asymptotic upper bound?", "Big Omega", "Big Theta", "Big O", "Little o", "2"}
+        };
+
+        Quiz quiz = new Quiz();
+        quiz.setCourse(course);
+        quiz.setTitle(title);
+        quiz.setDurationMinutes(30);
+        quiz.setTotalMarks(questions.length);
+        quiz.setCreatedBy(professor);
+
+        for (String[] questionData : questions) {
+            QuizQuestion question = new QuizQuestion();
+            question.setQuiz(quiz);
+            question.setQuestionText(questionData[0]);
+            question.setMarks(1);
+
+            for (int optionIndex = 1; optionIndex <= 4; optionIndex++) {
+                QuizOption option = new QuizOption();
+                option.setQuestion(question);
+                option.setOptionText(questionData[optionIndex]);
+                option.setIsCorrect(Integer.toString(optionIndex - 1).equals(questionData[5]));
+                question.getOptions().add(option);
+            }
+            quiz.getQuestions().add(question);
+        }
+
+        quizRepository.save(quiz);
+    }
+
+    private void seedLinkedListQuiz(Course course, User professor) {
+        String title = "Linked List Fundamentals Quiz";
+        boolean alreadyExists = quizRepository.findByCourseCourseId(course.getCourseId()).stream()
+                .anyMatch(quiz -> title.equals(quiz.getTitle()));
+        if (alreadyExists) {
+            return;
+        }
+
+        String[][] questions = {
+                {"Which pointer usually identifies the first node in a linked list?", "Tail", "Head", "Middle", "Root", "1"},
+                {"What is the time complexity of inserting a node at the beginning of a singly linked list?", "O(1)", "O(log n)", "O(n)", "O(n²)", "0"},
+                {"What does the next pointer of the last node in a singly linked list contain?", "The head node", "The previous node", "Null", "The list size", "2"},
+                {"Which linked list allows traversal in both forward and backward directions?", "Singly linked list", "Circular singly linked list", "Doubly linked list", "Static array", "2"},
+                {"What is required to traverse every node in a linked list?", "Binary search", "Following next references", "Heapifying", "Hashing", "1"}
+        };
+
+        Quiz quiz = new Quiz();
+        quiz.setCourse(course);
+        quiz.setTitle(title);
+        quiz.setDurationMinutes(10);
+        quiz.setTotalMarks(questions.length);
+        quiz.setCreatedBy(professor);
+
+        for (String[] questionData : questions) {
+            QuizQuestion question = new QuizQuestion();
+            question.setQuiz(quiz);
+            question.setQuestionText(questionData[0]);
+            question.setMarks(1);
+
+            for (int optionIndex = 1; optionIndex <= 4; optionIndex++) {
+                QuizOption option = new QuizOption();
+                option.setQuestion(question);
+                option.setOptionText(questionData[optionIndex]);
+                option.setIsCorrect(Integer.toString(optionIndex - 1).equals(questionData[5]));
+                question.getOptions().add(option);
+            }
+            quiz.getQuestions().add(question);
+        }
+
+        quizRepository.save(quiz);
     }
 }

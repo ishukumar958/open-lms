@@ -140,6 +140,207 @@ INSERT INTO quiz_answers (attempt_id, question_id, selected_option_id)
 SELECT @attempt_id, @q2_id, @q2_opt2
 WHERE NOT EXISTS (SELECT 1 FROM quiz_answers WHERE attempt_id = @attempt_id AND question_id = @q2_id);
 
+-- 9. Seed 5-question linked list quiz
+INSERT INTO quizzes (course_id, title, duration_minutes, total_marks, created_by)
+SELECT @course_id, 'Linked List Fundamentals Quiz', 10, 5, @prof_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM quizzes
+    WHERE course_id = @course_id
+      AND title = 'Linked List Fundamentals Quiz'
+);
+
+SET @linked_list_quiz_id = (
+    SELECT quiz_id FROM quizzes
+    WHERE course_id = @course_id
+      AND title = 'Linked List Fundamentals Quiz'
+    LIMIT 1
+);
+
+INSERT INTO quiz_questions (quiz_id, question_text, marks)
+SELECT @linked_list_quiz_id, q.question_text, 1
+FROM (
+    SELECT 'Which pointer usually identifies the first node in a linked list?' AS question_text
+    UNION ALL SELECT 'What is the time complexity of inserting a node at the beginning of a singly linked list?'
+    UNION ALL SELECT 'What does the next pointer of the last node in a singly linked list contain?'
+    UNION ALL SELECT 'Which linked list allows traversal in both forward and backward directions?'
+    UNION ALL SELECT 'What is required to traverse every node in a linked list?'
+) q
+WHERE NOT EXISTS (
+    SELECT 1 FROM quiz_questions existing
+    WHERE existing.quiz_id = @linked_list_quiz_id
+      AND existing.question_text = q.question_text
+);
+
+INSERT INTO quiz_options (question_id, option_text, is_correct)
+SELECT q.question_id, o.option_text, o.is_correct
+FROM quiz_questions q
+JOIN (
+    SELECT 'Which pointer usually identifies the first node in a linked list?' question_text, 'Tail' option_text, 0 is_correct
+    UNION ALL SELECT 'Which pointer usually identifies the first node in a linked list?', 'Head', 1
+    UNION ALL SELECT 'Which pointer usually identifies the first node in a linked list?', 'Middle', 0
+    UNION ALL SELECT 'Which pointer usually identifies the first node in a linked list?', 'Root', 0
+    UNION ALL SELECT 'What is the time complexity of inserting a node at the beginning of a singly linked list?', 'O(1)', 1
+    UNION ALL SELECT 'What is the time complexity of inserting a node at the beginning of a singly linked list?', 'O(log n)', 0
+    UNION ALL SELECT 'What is the time complexity of inserting a node at the beginning of a singly linked list?', 'O(n)', 0
+    UNION ALL SELECT 'What is the time complexity of inserting a node at the beginning of a singly linked list?', 'O(n²)', 0
+    UNION ALL SELECT 'What does the next pointer of the last node in a singly linked list contain?', 'The head node', 0
+    UNION ALL SELECT 'What does the next pointer of the last node in a singly linked list contain?', 'The previous node', 0
+    UNION ALL SELECT 'What does the next pointer of the last node in a singly linked list contain?', 'Null', 1
+    UNION ALL SELECT 'What does the next pointer of the last node in a singly linked list contain?', 'The list size', 0
+    UNION ALL SELECT 'Which linked list allows traversal in both forward and backward directions?', 'Singly linked list', 0
+    UNION ALL SELECT 'Which linked list allows traversal in both forward and backward directions?', 'Circular singly linked list', 0
+    UNION ALL SELECT 'Which linked list allows traversal in both forward and backward directions?', 'Doubly linked list', 1
+    UNION ALL SELECT 'Which linked list allows traversal in both forward and backward directions?', 'Static array', 0
+    UNION ALL SELECT 'What is required to traverse every node in a linked list?', 'Binary search', 0
+    UNION ALL SELECT 'What is required to traverse every node in a linked list?', 'Following next references', 1
+    UNION ALL SELECT 'What is required to traverse every node in a linked list?', 'Heapifying', 0
+    UNION ALL SELECT 'What is required to traverse every node in a linked list?', 'Hashing', 0
+) o ON o.question_text = q.question_text
+WHERE q.quiz_id = @linked_list_quiz_id
+  AND NOT EXISTS (
+      SELECT 1 FROM quiz_options existing
+      WHERE existing.question_id = q.question_id
+        AND existing.option_text = o.option_text
+  );
+
+-- 9. Seed 20-question DSA certification quiz for Prof. Priya Sharma
+INSERT INTO quizzes (course_id, title, duration_minutes, total_marks, created_by)
+SELECT @course_id, 'DSA Mastery Quiz: Core Data Structures & Algorithms', 30, 20, @prof_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM quizzes
+    WHERE course_id = @course_id
+      AND title = 'DSA Mastery Quiz: Core Data Structures & Algorithms'
+);
+
+SET @dsa_quiz_id = (
+    SELECT quiz_id FROM quizzes
+    WHERE course_id = @course_id
+      AND title = 'DSA Mastery Quiz: Core Data Structures & Algorithms'
+    LIMIT 1
+);
+
+INSERT INTO quiz_questions (quiz_id, question_text, marks)
+SELECT @dsa_quiz_id, q.question_text, 1
+FROM (
+    SELECT 'Which data structure provides LIFO access?' AS question_text
+    UNION ALL SELECT 'What is the average-case lookup time in a hash table?'
+    UNION ALL SELECT 'Which traversal visits a binary search tree in sorted order?'
+    UNION ALL SELECT 'What is the time complexity of binary search on a sorted array?'
+    UNION ALL SELECT 'Which data structure is best suited for breadth-first search?'
+    UNION ALL SELECT 'What is the worst-case time complexity of quicksort?'
+    UNION ALL SELECT 'Which algorithm finds the shortest path with non-negative edge weights?'
+    UNION ALL SELECT 'What is the space complexity of an adjacency matrix for V vertices?'
+    UNION ALL SELECT 'Which sorting algorithm is stable by default?'
+    UNION ALL SELECT 'What does a queue follow?'
+    UNION ALL SELECT 'What is the root of a min-heap?'
+    UNION ALL SELECT 'Which technique solves overlapping subproblems by storing results?'
+    UNION ALL SELECT 'What is the time complexity of inserting at the head of a linked list?'
+    UNION ALL SELECT 'Which graph traversal can detect a cycle in a directed graph using colors?'
+    UNION ALL SELECT 'What is the maximum number of children of a binary tree node?'
+    UNION ALL SELECT 'Which sorting algorithm repeatedly selects the minimum remaining item?'
+    UNION ALL SELECT 'What is the worst-case height of an unbalanced binary search tree with n nodes?'
+    UNION ALL SELECT 'Which data structure is used by a recursive function call stack?'
+    UNION ALL SELECT 'What is the time complexity of merging two sorted arrays of sizes n and m?'
+    UNION ALL SELECT 'Which notation describes an asymptotic upper bound?'
+) q
+WHERE NOT EXISTS (
+    SELECT 1 FROM quiz_questions existing
+    WHERE existing.quiz_id = @dsa_quiz_id
+      AND existing.question_text = q.question_text
+);
+
+INSERT INTO quiz_options (question_id, option_text, is_correct)
+SELECT q.question_id, o.option_text, o.is_correct
+FROM quiz_questions q
+JOIN (
+    SELECT 'Which data structure provides LIFO access?' question_text, 'Queue' option_text, 0 is_correct
+    UNION ALL SELECT 'Which data structure provides LIFO access?', 'Stack', 1
+    UNION ALL SELECT 'Which data structure provides LIFO access?', 'Heap', 0
+    UNION ALL SELECT 'Which data structure provides LIFO access?', 'Graph', 0
+    UNION ALL SELECT 'What is the average-case lookup time in a hash table?', 'O(n)', 0
+    UNION ALL SELECT 'What is the average-case lookup time in a hash table?', 'O(log n)', 0
+    UNION ALL SELECT 'What is the average-case lookup time in a hash table?', 'O(1)', 1
+    UNION ALL SELECT 'What is the average-case lookup time in a hash table?', 'O(n log n)', 0
+    UNION ALL SELECT 'Which traversal visits a binary search tree in sorted order?', 'Preorder', 0
+    UNION ALL SELECT 'Which traversal visits a binary search tree in sorted order?', 'Inorder', 1
+    UNION ALL SELECT 'Which traversal visits a binary search tree in sorted order?', 'Postorder', 0
+    UNION ALL SELECT 'Which traversal visits a binary search tree in sorted order?', 'Level order', 0
+    UNION ALL SELECT 'What is the time complexity of binary search on a sorted array?', 'O(1)', 0
+    UNION ALL SELECT 'What is the time complexity of binary search on a sorted array?', 'O(n)', 0
+    UNION ALL SELECT 'What is the time complexity of binary search on a sorted array?', 'O(log n)', 1
+    UNION ALL SELECT 'What is the time complexity of binary search on a sorted array?', 'O(n log n)', 0
+    UNION ALL SELECT 'Which data structure is best suited for breadth-first search?', 'Stack', 0
+    UNION ALL SELECT 'Which data structure is best suited for breadth-first search?', 'Queue', 1
+    UNION ALL SELECT 'Which data structure is best suited for breadth-first search?', 'Heap', 0
+    UNION ALL SELECT 'Which data structure is best suited for breadth-first search?', 'Set', 0
+    UNION ALL SELECT 'What is the worst-case time complexity of quicksort?', 'O(log n)', 0
+    UNION ALL SELECT 'What is the worst-case time complexity of quicksort?', 'O(n)', 0
+    UNION ALL SELECT 'What is the worst-case time complexity of quicksort?', 'O(n log n)', 0
+    UNION ALL SELECT 'What is the worst-case time complexity of quicksort?', 'O(n²)', 1
+    UNION ALL SELECT 'Which algorithm finds the shortest path with non-negative edge weights?', 'Kruskal', 0
+    UNION ALL SELECT 'Which algorithm finds the shortest path with non-negative edge weights?', 'Dijkstra', 1
+    UNION ALL SELECT 'Which algorithm finds the shortest path with non-negative edge weights?', 'Prim', 0
+    UNION ALL SELECT 'Which algorithm finds the shortest path with non-negative edge weights?', 'Floyd only', 0
+    UNION ALL SELECT 'What is the space complexity of an adjacency matrix for V vertices?', 'O(V)', 0
+    UNION ALL SELECT 'What is the space complexity of an adjacency matrix for V vertices?', 'O(log V)', 0
+    UNION ALL SELECT 'What is the space complexity of an adjacency matrix for V vertices?', 'O(V²)', 1
+    UNION ALL SELECT 'What is the space complexity of an adjacency matrix for V vertices?', 'O(E)', 0
+    UNION ALL SELECT 'Which sorting algorithm is stable by default?', 'Heap sort', 0
+    UNION ALL SELECT 'Which sorting algorithm is stable by default?', 'Merge sort', 1
+    UNION ALL SELECT 'Which sorting algorithm is stable by default?', 'Selection sort', 0
+    UNION ALL SELECT 'Which sorting algorithm is stable by default?', 'Quick sort', 0
+    UNION ALL SELECT 'What does a queue follow?', 'LIFO', 0
+    UNION ALL SELECT 'What does a queue follow?', 'FIFO', 1
+    UNION ALL SELECT 'What does a queue follow?', 'Random access', 0
+    UNION ALL SELECT 'What does a queue follow?', 'Priority only', 0
+    UNION ALL SELECT 'What is the root of a min-heap?', 'The maximum element', 0
+    UNION ALL SELECT 'What is the root of a min-heap?', 'The minimum element', 1
+    UNION ALL SELECT 'What is the root of a min-heap?', 'The median element', 0
+    UNION ALL SELECT 'What is the root of a min-heap?', 'Always zero', 0
+    UNION ALL SELECT 'Which technique solves overlapping subproblems by storing results?', 'Backtracking', 0
+    UNION ALL SELECT 'Which technique solves overlapping subproblems by storing results?', 'Dynamic programming', 1
+    UNION ALL SELECT 'Which technique solves overlapping subproblems by storing results?', 'Greedy search', 0
+    UNION ALL SELECT 'Which technique solves overlapping subproblems by storing results?', 'Hashing only', 0
+    UNION ALL SELECT 'What is the time complexity of inserting at the head of a linked list?', 'O(1)', 1
+    UNION ALL SELECT 'What is the time complexity of inserting at the head of a linked list?', 'O(log n)', 0
+    UNION ALL SELECT 'What is the time complexity of inserting at the head of a linked list?', 'O(n)', 0
+    UNION ALL SELECT 'What is the time complexity of inserting at the head of a linked list?', 'O(n²)', 0
+    UNION ALL SELECT 'Which graph traversal can detect a cycle in a directed graph using colors?', 'Breadth-first search', 0
+    UNION ALL SELECT 'Which graph traversal can detect a cycle in a directed graph using colors?', 'Depth-first search', 1
+    UNION ALL SELECT 'Which graph traversal can detect a cycle in a directed graph using colors?', 'Prim''s algorithm', 0
+    UNION ALL SELECT 'Which graph traversal can detect a cycle in a directed graph using colors?', 'Binary search', 0
+    UNION ALL SELECT 'What is the maximum number of children of a binary tree node?', '1', 0
+    UNION ALL SELECT 'What is the maximum number of children of a binary tree node?', '2', 1
+    UNION ALL SELECT 'What is the maximum number of children of a binary tree node?', '3', 0
+    UNION ALL SELECT 'What is the maximum number of children of a binary tree node?', 'Unlimited', 0
+    UNION ALL SELECT 'Which sorting algorithm repeatedly selects the minimum remaining item?', 'Insertion sort', 0
+    UNION ALL SELECT 'Which sorting algorithm repeatedly selects the minimum remaining item?', 'Selection sort', 1
+    UNION ALL SELECT 'Which sorting algorithm repeatedly selects the minimum remaining item?', 'Merge sort', 0
+    UNION ALL SELECT 'Which sorting algorithm repeatedly selects the minimum remaining item?', 'Radix sort', 0
+    UNION ALL SELECT 'What is the worst-case height of an unbalanced binary search tree with n nodes?', 'O(1)', 0
+    UNION ALL SELECT 'What is the worst-case height of an unbalanced binary search tree with n nodes?', 'O(log n)', 0
+    UNION ALL SELECT 'What is the worst-case height of an unbalanced binary search tree with n nodes?', 'O(n)', 1
+    UNION ALL SELECT 'What is the worst-case height of an unbalanced binary search tree with n nodes?', 'O(n log n)', 0
+    UNION ALL SELECT 'Which data structure is used by a recursive function call stack?', 'Queue', 0
+    UNION ALL SELECT 'Which data structure is used by a recursive function call stack?', 'Stack', 1
+    UNION ALL SELECT 'Which data structure is used by a recursive function call stack?', 'Graph', 0
+    UNION ALL SELECT 'Which data structure is used by a recursive function call stack?', 'Heap', 0
+    UNION ALL SELECT 'What is the time complexity of merging two sorted arrays of sizes n and m?', 'O(1)', 0
+    UNION ALL SELECT 'What is the time complexity of merging two sorted arrays of sizes n and m?', 'O(log(n + m))', 0
+    UNION ALL SELECT 'What is the time complexity of merging two sorted arrays of sizes n and m?', 'O(n + m)', 1
+    UNION ALL SELECT 'What is the time complexity of merging two sorted arrays of sizes n and m?', 'O(nm)', 0
+    UNION ALL SELECT 'Which notation describes an asymptotic upper bound?', 'Big Omega (Ω)', 0
+    UNION ALL SELECT 'Which notation describes an asymptotic upper bound?', 'Big Theta (Θ)', 0
+    UNION ALL SELECT 'Which notation describes an asymptotic upper bound?', 'Big O (O)', 1
+    UNION ALL SELECT 'Which notation describes an asymptotic upper bound?', 'Little o (o)', 0
+) o ON o.question_text = q.question_text
+WHERE q.quiz_id = @dsa_quiz_id
+  AND NOT EXISTS (
+      SELECT 1 FROM quiz_options existing
+      WHERE existing.question_id = q.question_id
+        AND existing.option_text = o.option_text
+  );
+
 
 INSERT INTO courses (course_code, course_name, description, section, professor_id)
 SELECT 'BIO-214', 'Cell & Molecular Biology', 'Comprehensive curriculum covering cell structure, enzymatic reactions, DNA replication, and microscopy labs.', 'Section 02', @prof_id
@@ -196,5 +397,3 @@ WHERE @student1_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM chat_messages WHERE
 INSERT INTO chat_messages (message_id, group_id, sender_id, message_content, message_type, is_pinned, created_at)
 SELECT 3, 1, @prof_id, 'Yes Rahul, please include both! Random keys will demonstrate average case logarithmic height balance.', 'TEXT', FALSE, DATE_SUB(NOW(), INTERVAL 18 HOUR)
 WHERE @prof_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM chat_messages WHERE message_id = 3);
-
-

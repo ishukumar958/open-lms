@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SearchInput } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Bell, Plus, ChevronDown, Check, GraduationCap, Briefcase, Info } from 'lucide-react';
+import { Bell, Plus, ChevronDown, Check, Info } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { joinCourse } from '../../lib/api/coursesApi';
@@ -72,21 +72,6 @@ export function Topbar({ title, subtitle }) {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
-          {/* User Role Badge */}
-          <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200">
-            {role === 'PROFESSOR' ? (
-              <>
-                <Briefcase className="w-3.5 h-3.5" />
-                <span>Faculty Workspace</span>
-              </>
-            ) : (
-              <>
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>Student View</span>
-              </>
-            )}
-          </div>
-
           {/* Search Bar */}
           <SearchInput className="hidden md:block" placeholder="Search Open LMS..." />
 

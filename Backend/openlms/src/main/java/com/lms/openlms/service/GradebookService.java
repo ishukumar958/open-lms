@@ -227,7 +227,8 @@ public class GradebookService {
                     q.getTitle(),
                     q.getTotalMarks(),
                     score,
-                    status
+                    status,
+                    qa != null ? qa.getSubmittedAt() : null
             ));
         }
 

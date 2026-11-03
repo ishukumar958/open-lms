@@ -87,6 +87,8 @@ $env:CLOUDINARY_API_SECRET="your_api_secret"
 
 The backend server listens on `http://localhost:8081` with base path `/api/v1`.
 
+On startup, `DataInitializer` also creates the demo CS-301 DSA certification quiz if it does not already exist. Restart the backend after pulling this change so the quiz is available to both the course owner and enrolled students.
+
 ### Running the Frontend
 
 From `Frontend`:
