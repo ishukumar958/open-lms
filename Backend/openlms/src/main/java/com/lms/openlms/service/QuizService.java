@@ -326,16 +326,19 @@ public class QuizService {
         courseAccessService.requireOwner(quiz.getCourse().getCourseId(), facultyUserId);
 
         return quizAttemptRepository.findByQuizQuizIdOrderByAttemptIdDesc(quizId).stream()
-                .map(qa -> new QuizAttemptListItem(
-                        qa.getAttemptId(),
-                        qa.getStudent() != null ? qa.getStudent().getUserId() : null,
-                        qa.getStudent() != null ? qa.getStudent().getName() : null,
-                        qa.getStudent() != null ? qa.getStudent().getEmail() : null,
-                        qa.getStatus(),
-                        qa.getScore(),
-                        quiz.getTotalMarks(),
-                        qa.getSubmittedAt()
-                ))
+                .map(qa -> {
+                    User student = qa.getStudent();
+                    return new QuizAttemptListItem(
+                            qa.getAttemptId(),
+                            student != null ? student.getUserId() : null,
+                            student != null ? student.getName() : null,
+                            student != null ? student.getEmail() : null,
+                            qa.getStatus(),
+                            qa.getScore(),
+                            quiz.getTotalMarks(),
+                            qa.getSubmittedAt()
+                    );
+                })
                 .collect(Collectors.toList());
     }
 

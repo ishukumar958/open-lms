@@ -13,6 +13,11 @@
   </head>
   <body class="bg-page text-ink antialiased selection:bg-brand-100 selection:text-brand-900">
     <div id="root"></div>
+    <script>
+      if (typeof window !== 'undefined' && typeof window.global === 'undefined') {
+        window.global = window;
+      }
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

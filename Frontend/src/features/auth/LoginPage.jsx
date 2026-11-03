@@ -86,10 +86,10 @@ export function LoginPage() {
   const fillQuickUser = (role) => {
     if (role === 'PROFESSOR') {
       setEmail(`priya.sharma@${defaultDomain}`);
-      setPassword('profPass123!');
+      setPassword('password123');
     } else {
       setEmail(`rahul.sharma@${defaultDomain}`);
-      setPassword('studentPass123!');
+      setPassword('password123');
     }
   };
 

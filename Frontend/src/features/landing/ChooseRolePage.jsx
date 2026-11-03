@@ -26,7 +26,7 @@ export function ChooseRolePage() {
   return (
     <div className="min-h-screen bg-page flex flex-col justify-between">
       {/* Top Header */}
-      <header className="px-8 py-6 flex items-center justify-between max-w-7xl w-full mx-auto">
+      <header className="px-4 sm:px-8 py-5 sm:py-6 flex items-center justify-between max-w-7xl w-full mx-auto">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center shadow-sm">
             <svg

@@ -49,7 +49,8 @@ public class GradebookDto {
             String title,
             Integer totalMarks,
             Integer score,
-            String status
+            String status,
+            java.time.LocalDateTime submittedAt
     ) {}
 
     public record StudentGradesResponse(

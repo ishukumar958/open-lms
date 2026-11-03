@@ -152,5 +152,15 @@ export async function listQuizAttempts(quizId) {
       },
     ];
   }
-  return apiRequest(`/quizzes/${quizId}/attempts`);
+  const attempts = await apiRequest(`/quizzes/${quizId}/attempts`);
+  return (attempts || []).map((attempt) => ({
+    ...attempt,
+    studentName:
+      attempt.studentName ||
+      attempt.student?.name ||
+      attempt.student?.fullName ||
+      attempt.name ||
+      '',
+    studentEmail: attempt.studentEmail || attempt.student?.email || '',
+  }));
 }

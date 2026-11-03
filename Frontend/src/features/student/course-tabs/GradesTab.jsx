@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getMyCourseGrades } from '../../../lib/api/gradesApi';
 import { Badge } from '../../../components/ui/Badge';
-import { Award, FileText, HelpCircle, CheckCircle2, Clock } from 'lucide-react';
+import { CompletionCertificateModal } from '../../../components/ui/CompletionCertificateModal';
+import { useAuthStore } from '../../../store/authStore';
+import { FileText, HelpCircle } from 'lucide-react';
 
 export function GradesTab({ courseId, course }) {
   const [gradesData, setGradesData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [certificateQuiz, setCertificateQuiz] = useState(null);
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     if (!courseId) return;
@@ -143,6 +147,7 @@ export function GradesTab({ courseId, course }) {
                   <th className="py-2.5 font-bold">Quiz Title</th>
                   <th className="py-2.5 font-bold">Status</th>
                   <th className="py-2.5 font-bold">Score</th>
+                  <th className="py-2.5 font-bold">Certificate</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -166,6 +171,19 @@ export function GradesTab({ courseId, course }) {
                         <span className="text-ink-muted font-normal">-- / {q.totalMarks}</span>
                       )}
                     </td>
+                    <td className="py-3">
+                      {q.status === 'SUBMITTED' && q.score != null ? (
+                        <button
+                          type="button"
+                          onClick={() => setCertificateQuiz(q)}
+                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                        >
+                          View certificate
+                        </button>
+                      ) : (
+                        <span className="text-ink-muted">--</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -173,6 +191,15 @@ export function GradesTab({ courseId, course }) {
           </div>
         )}
       </div>
+      <CompletionCertificateModal
+        isOpen={Boolean(certificateQuiz)}
+        onClose={() => setCertificateQuiz(null)}
+        studentName={user?.name}
+        courseName={course?.title || course?.courseName}
+        courseCode={course?.courseCode}
+        quiz={certificateQuiz}
+        submittedAt={certificateQuiz?.submittedAt}
+      />
     </div>
   );
 }

@@ -256,51 +256,58 @@ export function AssignmentsTab({ courseId, course }) {
         onClose={() => setIsModalOpen(false)}
         title={editingAssignment ? 'Edit Assignment' : 'Create Assignment'}
         description="Configure title, deadline, instructions, and max marks."
+        maxWidth="max-w-2xl"
       >
-        <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleFormSubmit} className="space-y-5 pt-2">
           {formError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{formError}</span>
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-ink">Assignment Title</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-ink">
+              Assignment title <span className="text-rose-500">*</span>
+            </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Lab Report 3: Membrane Transport"
-              className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-border bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-ink">Description / Instructions</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-ink">Description / instructions</label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detailed submission guidelines..."
-              className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-border bg-white placeholder:text-slate-400 resize-y focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-ink">Due Date & Time</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-ink">
+                Due date & time <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="datetime-local"
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-ink">Maximum Marks</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-ink">
+                Maximum marks <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="number"
                 min="1"
@@ -308,32 +315,37 @@ export function AssignmentsTab({ courseId, course }) {
                 required
                 value={maxMarks}
                 onChange={(e) => setMaxMarks(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-ink">Assignment Handout / Document (Cloudinary)</label>
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-semibold text-ink">Assignment handout</p>
+              <p className="text-[11px] text-ink-muted mt-0.5">
+                Add instructions, a rubric, or starter files for students.
+              </p>
+            </div>
             <FileUploader
               folder="assignments"
-              label="Upload assignment instructions, rubric, or starter files (up to 10MB)"
+              label="Upload a file (up to 10MB)"
               onUploadSuccess={(res) => setAttachmentUrl(res.fileUrl || res.url)}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-ink">Attachment URL (Optional)</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-ink">Attachment URL <span className="font-normal text-ink-muted">(optional)</span></label>
             <input
               type="url"
               value={attachmentUrl}
               onChange={(e) => setAttachmentUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-border bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-slate-100 sticky bottom-0 bg-white">
             <Button
               type="button"
               variant="outline"

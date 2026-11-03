@@ -156,7 +156,7 @@ export function StudentSignupPage() {
   return (
     <div className="min-h-screen bg-page flex flex-col justify-between">
       {/* Header */}
-      <header className="px-8 py-5 flex items-center justify-between max-w-7xl w-full mx-auto">
+      <header className="px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between gap-3 max-w-7xl w-full mx-auto">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center shadow-sm">
             <svg
@@ -175,8 +175,8 @@ export function StudentSignupPage() {
           </div>
           <span className="font-bold text-lg tracking-tight text-ink">Open LMS</span>
         </Link>
-        <div className="text-xs text-ink-muted">
-          Already registered?{' '}
+        <div className="text-right text-xs text-ink-muted">
+          <span className="hidden sm:inline">Already registered? </span>
           <Link to="/login" className="text-brand-600 font-semibold hover:underline">
             Sign in
           </Link>
@@ -185,7 +185,7 @@ export function StudentSignupPage() {
 
       {/* Main Container */}
       <main className="max-w-5xl w-full mx-auto px-6 py-6 flex-1 flex items-center">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 w-full items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full items-start">
           {/* Left Column: Intro & 3-Step Stepper */}
           <div className="lg:col-span-5 space-y-6">
             <div>
@@ -280,7 +280,7 @@ export function StudentSignupPage() {
 
           {/* Right Column: Form Card */}
           <div className="lg:col-span-7">
-            <div className="bg-white rounded-3xl p-8 border border-ink-border shadow-soft">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-ink-border shadow-soft">
               {formError && (
                 <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700 flex flex-col gap-2">
                   <div className="flex items-start gap-2 font-medium">
@@ -307,7 +307,7 @@ export function StudentSignupPage() {
                   </div>
 
                   <form onSubmit={handleStep1Submit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Input
                         label="First name"
                         value={formData.firstName}
@@ -341,7 +341,7 @@ export function StudentSignupPage() {
                       required
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <PasswordInput
                         label="Create password"
                         value={formData.password}
