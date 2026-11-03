@@ -1,418 +1,429 @@
-import React, { useState } from 'react';
-import { MOCK_SUBMISSIONS_DATA } from '../../mocks/mockData';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { listSubmissions, gradeSubmission } from '../../lib/api/submissionsApi';
+import { listMyCourses } from '../../lib/api/coursesApi';
 import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import {
   Search,
-  ChevronDown,
-  Download,
-  FileText,
   ExternalLink,
-  MessageSquare,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  AlertCircle,
+  Clock,
+  Inbox,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export function SubmissionsGradingPage() {
-  const data = MOCK_SUBMISSIONS_DATA;
-  const [selectedStudentId, setSelectedStudentId] = useState('s-rahul-sharma');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCourseId = searchParams.get('courseId') || '';
+  const initialAssignmentId = searchParams.get('assignmentId') || '';
+
+  const [courses, setCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState(initialCourseId);
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTab, setFilterTab] = useState('all');
 
-  // Grading states for current student
-  const [students, setStudents] = useState(data.students);
-  const currentStudent =
-    students.find((s) => s.id === selectedStudentId) || students[0];
+  const [submissions, setSubmissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
 
-  const [score, setScore] = useState(currentStudent.grade.score);
-  const [rubricScores, setRubricScores] = useState(
-    currentStudent.grade.rubric.map((r) => r.score)
-  );
-  const [feedback, setFeedback] = useState(currentStudent.grade.feedback);
-  const [gradeStatus, setGradeStatus] = useState(currentStudent.grade.status);
-  const [isReturnSuccessModal, setIsReturnSuccessModal] = useState(false);
+  // Grading form state
+  const [gradeStatus, setGradeStatus] = useState('APPROVED');
+  const [marks, setMarks] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [grading, setGrading] = useState(false);
+  const [gradeError, setGradeError] = useState(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
-  // Sync state when switching student
-  const handleSelectStudent = (student) => {
-    setSelectedStudentId(student.id);
-    setScore(student.grade.score);
-    setRubricScores(student.grade.rubric.map((r) => r.score));
-    setFeedback(student.grade.feedback);
-    setGradeStatus(student.grade.status);
-  };
+  // Load courses
+  useEffect(() => {
+    listMyCourses()
+      .then((data) => setCourses(data || []))
+      .catch((err) => console.error('Failed to load professor courses:', err));
+  }, []);
 
-  const handleRubricScoreChange = (idx, newScore) => {
-    const updated = [...rubricScores];
-    updated[idx] = Math.min(5, Math.max(0, Number(newScore)));
-    setRubricScores(updated);
-    const newTotal = updated.reduce((a, b) => a + b, 0);
-    setScore(newTotal);
-  };
+  // Fetch submissions
+  const fetchSubmissions = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (selectedCourseId) params.courseId = selectedCourseId;
+      if (selectedStatus && selectedStatus !== 'ALL') params.status = selectedStatus;
+      const data = await listSubmissions(params);
+      setSubmissions(data || []);
 
-  const handleReturnGrade = () => {
-    setGradeStatus('Graded');
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === currentStudent.id
-          ? {
-              ...s,
-              grade: {
-                ...s.grade,
-                score,
-                feedback,
-                status: 'Graded',
-              },
-            }
-          : s
-      )
-    );
-    setIsReturnSuccessModal(true);
-  };
-
-  const filteredStudents = students.filter((s) => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    if (filterTab === 'needs-grading') {
-      return matchesSearch && s.status === 'Submitted' && s.grade.status === 'Draft';
+      if (data && data.length > 0) {
+        // If initial assignment filter was provided, pick first from that assignment
+        if (initialAssignmentId) {
+          const match = data.find((s) => String(s.assignmentId) === String(initialAssignmentId));
+          if (match) {
+            setSelectedSubmissionId(match.submissionId);
+            setGradeStatus(match.status === 'REJECTED' ? 'REJECTED' : 'APPROVED');
+            setMarks(match.marksObtained != null ? String(match.marksObtained) : '');
+            setFeedback(match.feedback || '');
+            return;
+          }
+        }
+        if (!selectedSubmissionId || !data.some((s) => s.submissionId === selectedSubmissionId)) {
+          setSelectedSubmissionId(data[0].submissionId);
+          setGradeStatus(data[0].status === 'REJECTED' ? 'REJECTED' : 'APPROVED');
+          setMarks(data[0].marksObtained != null ? String(data[0].marksObtained) : '');
+          setFeedback(data[0].feedback || '');
+        }
+      } else {
+        setSelectedSubmissionId(null);
+      }
+    } catch (err) {
+      console.error('Failed to load submissions:', err);
+    } finally {
+      setLoading(false);
     }
-    return matchesSearch;
+  };
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [selectedCourseId, selectedStatus]);
+
+  const currentSubmission = submissions.find((s) => s.submissionId === selectedSubmissionId);
+
+  const handleSelectSubmission = (s) => {
+    setSelectedSubmissionId(s.submissionId);
+    setGradeStatus(s.status === 'REJECTED' ? 'REJECTED' : 'APPROVED');
+    setMarks(s.marksObtained != null ? String(s.marksObtained) : '');
+    setFeedback(s.feedback || '');
+    setGradeError(null);
+  };
+
+  const handleGradeSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentSubmission) return;
+    setGradeError(null);
+
+    const marksNum = gradeStatus === 'APPROVED' ? Number(marks) : null;
+    if (gradeStatus === 'APPROVED') {
+      if (marks === '' || isNaN(marksNum) || marksNum < 0) {
+        setGradeError('Marks obtained is required and must be 0 or greater.');
+        return;
+      }
+      if (currentSubmission.maxMarks && marksNum > currentSubmission.maxMarks) {
+        setGradeError(`Marks cannot exceed maximum marks (${currentSubmission.maxMarks}).`);
+        return;
+      }
+    }
+
+    if (!feedback.trim()) {
+      setGradeError('Feedback is required.');
+      return;
+    }
+
+    setGrading(true);
+    try {
+      await gradeSubmission(currentSubmission.submissionId, {
+        status: gradeStatus,
+        marks: marksNum,
+        feedback: feedback.trim(),
+      });
+      setIsSuccessModalOpen(true);
+      await fetchSubmissions();
+    } catch (err) {
+      console.error('Failed to grade submission:', err);
+      setGradeError(err.message || 'Failed to grade submission.');
+    } finally {
+      setGrading(false);
+    }
+  };
+
+  const filteredSubmissions = submissions.filter((s) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (s.studentName && s.studentName.toLowerCase().includes(q)) ||
+      (s.assignmentTitle && s.assignmentTitle.toLowerCase().includes(q))
+    );
   });
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Summary Stats */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-ink tracking-tight">
-              Submissions
-            </h1>
-            <span className="text-sm font-semibold text-ink-muted">
-              {data.courseCode}
-            </span>
-          </div>
+          <h1 className="text-2xl font-extrabold text-ink tracking-tight">Submissions & Grading</h1>
+          <p className="text-xs text-ink-muted mt-0.5">
+            Review student responses, enter marks, and return feedback.
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Summary tiles */}
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-ink-border text-xs font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span>43 Submitted</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-ink-border text-xs font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            <span>31 Graded</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-ink-border text-xs font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-            <span>3 Late</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-ink-border text-xs font-semibold">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span>2 Missing</span>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Download}
-            onClick={() => alert('Exporting all grades to CSV...')}
-            className="font-medium text-xs bg-white"
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedCourseId}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-ink-border bg-white text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
-            Export grades
-          </Button>
+            <option value="">All Courses</option>
+            {courses.map((c) => (
+              <option key={c.courseId} value={c.courseId}>
+                {c.courseCode} · {c.courseName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-ink-border bg-white text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="SUBMITTED">Needs Review (SUBMITTED)</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
         </div>
       </div>
 
-      {/* 3-Pane Workspace Container */}
+      {/* Main 2-Column Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Pane 1 (3 cols): Students List */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-ink-border shadow-soft p-4 space-y-4">
-          {/* Assignment Meta */}
-          <div className="pb-3 border-b border-slate-100">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600 block mb-0.5">
-              {data.assignment.module}
-            </span>
-            <h3 className="text-xs font-bold text-ink leading-snug">
-              {data.assignment.title}
-            </h3>
-            <p className="text-[11px] text-ink-muted mt-1 leading-tight">
-              {data.assignment.dueLabel}
-            </p>
-          </div>
-
-          {/* Search & Filter */}
-          <div className="space-y-2">
+        {/* Left (5 cols): Submissions List */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-ink-border shadow-soft overflow-hidden">
+          <div className="p-3 border-b border-ink-border bg-slate-50/50">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-ink-muted" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
               <input
                 type="text"
-                placeholder="Search students..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs py-2 pl-8 pr-3 rounded-lg border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-400"
+                placeholder="Search student or assignment..."
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
-            </div>
-
-            <div className="flex gap-1.5 text-[11px]">
-              <button
-                onClick={() => setFilterTab('all')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md font-semibold transition-colors',
-                  filterTab === 'all'
-                    ? 'bg-slate-200 text-ink'
-                    : 'text-ink-muted hover:text-ink'
-                )}
-              >
-                All (48)
-              </button>
-              <button
-                onClick={() => setFilterTab('needs-grading')}
-                className={cn(
-                  'px-2.5 py-1 rounded-md font-semibold transition-colors',
-                  filterTab === 'needs-grading'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'text-ink-muted hover:text-ink'
-                )}
-              >
-                Needs grading
-              </button>
             </div>
           </div>
 
-          {/* Students List */}
-          <div className="space-y-1 divide-y divide-slate-50 max-h-[520px] overflow-y-auto">
-            {filteredStudents.map((s) => {
-              const isSelected = s.id === currentStudent.id;
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => handleSelectStudent(s)}
-                  className={cn(
-                    'p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between',
-                    isSelected
-                      ? 'bg-brand-50/80 border border-brand-200 shadow-2xs'
-                      : 'hover:bg-slate-50'
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <Avatar initials={s.initials} size="sm" color="brand" />
-                    <div className="overflow-hidden">
-                      <p
-                        className={cn(
-                          'text-xs truncate font-semibold',
-                          isSelected ? 'text-brand-900 font-bold' : 'text-ink'
-                        )}
-                      >
-                        {s.name}
+          {loading ? (
+            <div className="p-10 text-center text-xs text-ink-muted">Loading submissions...</div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="p-10 text-center text-xs text-ink-muted">
+              <Inbox className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              No submissions match the current filter.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 max-h-[calc(100vh-280px)] overflow-y-auto">
+              {filteredSubmissions.map((s) => {
+                const isSelected = s.submissionId === selectedSubmissionId;
+                const date = s.submittedAt ? new Date(s.submittedAt) : null;
+                const timeLabel = date
+                  ? `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Submitted';
+
+                return (
+                  <div
+                    key={s.submissionId}
+                    onClick={() => handleSelectSubmission(s)}
+                    className={cn(
+                      'p-4 transition-colors cursor-pointer flex items-start justify-between gap-3',
+                      isSelected
+                        ? 'bg-brand-50/70 border-l-4 border-l-brand-600'
+                        : 'hover:bg-slate-50/80'
+                    )}
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Avatar
+                          initials={
+                            s.studentName
+                              ? s.studentName.split(' ').map((n) => n[0]).join('').slice(0, 2)
+                              : 'ST'
+                          }
+                          size="xs"
+                          color="brand"
+                        />
+                        <h4 className="text-xs font-bold text-ink truncate">{s.studentName}</h4>
+                      </div>
+                      <p className="text-xs font-semibold text-brand-700 truncate">
+                        {s.assignmentTitle}
                       </p>
-                      <p className="text-[10px] text-ink-muted truncate">
-                        {s.submittedAt}
+                      <p className="text-[10px] text-ink-muted flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {timeLabel}
                       </p>
                     </div>
-                  </div>
 
-                  <Badge
-                    variant={
-                      s.status === 'Submitted'
-                        ? 'submitted'
-                        : s.status === 'Late'
-                        ? 'late'
-                        : 'missing'
-                    }
-                    size="xs"
-                  >
-                    {s.status}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
+                    <Badge
+                      variant={
+                        s.status === 'APPROVED'
+                          ? 'success'
+                          : s.status === 'REJECTED'
+                          ? 'rose'
+                          : 'amber'
+                      }
+                      size="xs"
+                      className="shrink-0"
+                    >
+                      {s.status}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Pane 2 (5 cols): Submission Document Viewer */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-ink-border shadow-soft p-6 space-y-5">
-          {/* Document Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
-            <div>
-              <h2 className="text-base font-bold text-ink">{currentStudent.name}</h2>
-              <p className="text-xs text-ink-muted mt-0.5">
-                Submitted {currentStudent.submittedAt} · {currentStudent.onTimeText} ·{' '}
-                {currentStudent.wordCount} words
-              </p>
+        {/* Right (7 cols): Grading Panel */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-ink-border p-6 shadow-soft space-y-6">
+          {!currentSubmission ? (
+            <div className="py-16 text-center text-xs text-ink-muted">
+              Select a submission from the list to review and grade.
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="xs"
-                icon={FileText}
-                onClick={() => alert('Viewing raw student file attachment.')}
-                className="bg-white"
-              >
-                File
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                icon={ExternalLink}
-                onClick={() => alert('Opening full screen preview.')}
-                className="bg-white"
-              >
-                Open
-              </Button>
-            </div>
-          </div>
-
-          {/* Submission Text Content */}
-          <div className="prose prose-sm max-w-none text-ink space-y-4">
-            <h3 className="text-sm font-bold text-ink leading-snug">
-              {currentStudent.title}
-            </h3>
-
-            {currentStudent.id === 's-rahul-sharma' ? (
-              <>
-                <p className="text-xs text-ink leading-relaxed">
-                  In our dialysis tubing investigation, the movement of iodine into the
-                  model cell demonstrated passive transport across a selectively
-                  permeable membrane. The color change was strongest in the sample with
-                  the steepest concentration gradient, which aligned with our prediction.
-                </p>
-
-                <p className="text-xs text-ink leading-relaxed">
-                  The evidence also helped me distinguish equilibrium from an absence of
-                  molecular movement: particles continue moving randomly even when there
-                  is no net change.
-                </p>
-
-                {/* Inline Comment Highlight Area as shown in Figma */}
-                <div className="relative my-3 p-3 rounded-xl bg-amber-50/80 border-l-4 border-l-amber-500 border border-amber-200">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-200 px-2 py-0.5 rounded">
-                      COMMENT 1
-                    </span>
-                    <span className="text-[10px] text-amber-700">Dr. Elena Park</span>
-                  </div>
-                  <p className="text-xs text-amber-950 italic leading-relaxed">
-                    “If we repeated the investigation, I would use a broader range of
-                    solute concentrations and measure mass at shorter intervals. This
-                    would give us a clearer curve for the changing rate of osmosis over
-                    time.”
+          ) : (
+            <>
+              {/* Submission Details Header */}
+              <div className="flex items-start justify-between pb-4 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">
+                    {currentSubmission.courseName || `Course #${currentSubmission.courseId}`}
+                  </span>
+                  <h2 className="text-base font-bold text-ink mt-0.5">
+                    {currentSubmission.assignmentTitle}
+                  </h2>
+                  <p className="text-xs text-ink-muted mt-0.5">
+                    Submitted by <strong>{currentSubmission.studentName}</strong> ({currentSubmission.studentEmail})
                   </p>
                 </div>
-              </>
-            ) : (
-              <p className="text-xs text-ink leading-relaxed whitespace-pre-line">
-                {currentStudent.content}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Pane 3 (4 cols): Grade & Rubric Panel */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-ink-border shadow-soft p-6 space-y-6">
-          {/* Big Grade Input Header */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-                Grade
-              </span>
-              <Badge
-                variant={gradeStatus === 'Graded' ? 'graded' : 'draft'}
-                size="sm"
-              >
-                {gradeStatus}
-              </Badge>
-            </div>
-
-            <div className="flex items-baseline gap-2">
-              <input
-                type="number"
-                min={0}
-                max={20}
-                value={score}
-                onChange={(e) => setScore(Number(e.target.value))}
-                className="w-20 text-3xl font-extrabold text-ink text-center py-1 border border-ink-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400"
-              />
-              <span className="text-sm font-semibold text-ink-muted">
-                / 20 points
-              </span>
-            </div>
-          </div>
-
-          {/* Rubric Breakdown */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <span className="text-xs font-bold text-ink block mb-1">
-              Grading Rubric
-            </span>
-            {currentStudent.grade.rubric.map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between text-xs py-1.5 border-b border-slate-50"
-              >
-                <span className="text-ink font-medium">{item.name}</span>
-                <div className="flex items-center gap-1 font-semibold text-ink">
-                  <input
-                    type="number"
-                    min={0}
-                    max={item.max}
-                    value={rubricScores[idx] ?? item.score}
-                    onChange={(e) => handleRubricScoreChange(idx, e.target.value)}
-                    className="w-10 text-center py-0.5 rounded border border-ink-border font-bold text-brand-700"
-                  />
-                  <span className="text-ink-muted">/ {item.max}</span>
-                </div>
+                <Badge
+                  variant={
+                    currentSubmission.status === 'APPROVED'
+                      ? 'success'
+                      : currentSubmission.status === 'REJECTED'
+                      ? 'rose'
+                      : 'amber'
+                  }
+                  size="sm"
+                >
+                  {currentSubmission.status}
+                </Badge>
               </div>
-            ))}
-          </div>
 
-          {/* Feedback Textarea */}
-          <div className="space-y-2 pt-2 border-t border-slate-100">
-            <div className="flex justify-between items-center text-xs">
-              <label className="font-bold text-ink">Feedback</label>
-              <span className="text-[10px] text-ink-muted">
-                {feedback.length} / 2,000
-              </span>
-            </div>
+              {/* Student Response Content */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                  Student Submission Content
+                </h4>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-ink leading-relaxed whitespace-pre-wrap min-h-24">
+                  {currentSubmission.submissionText || (
+                    <span className="text-ink-muted italic">No text provided.</span>
+                  )}
+                </div>
 
-            <textarea
-              rows={4}
-              maxLength={2000}
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="w-full text-xs text-ink p-3 rounded-xl border border-ink-border focus:outline-none focus:ring-2 focus:ring-brand-400 leading-relaxed"
-              placeholder="Add personal feedback for the student..."
-            />
-          </div>
+                {currentSubmission.fileUrl && (
+                  <div className="pt-1">
+                    <a
+                      href={currentSubmission.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-brand-700 border border-violet-200 text-xs font-semibold hover:bg-violet-100 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Open Attachment Link
+                    </a>
+                  </div>
+                )}
+              </div>
 
-          {/* Return Grade Button */}
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleReturnGrade}
-            className="w-full font-bold shadow-sm"
-          >
-            Return grade to {currentStudent.name.split(' ')[0]}
-          </Button>
+              {/* Grading Form */}
+              <form onSubmit={handleGradeSubmit} className="space-y-4 pt-4 border-t border-slate-100">
+                <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                  Evaluation & Feedback
+                </h4>
+
+                {gradeError && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{gradeError}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink">Decision Status</label>
+                    <select
+                      value={gradeStatus}
+                      onChange={(e) => setGradeStatus(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold"
+                    >
+                      <option value="APPROVED">Approve (Award Marks)</option>
+                      <option value="REJECTED">Reject (Request Resubmission)</option>
+                    </select>
+                  </div>
+
+                  {gradeStatus === 'APPROVED' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-ink">
+                        Marks Obtained {currentSubmission.maxMarks ? `(out of ${currentSubmission.maxMarks})` : ''}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={currentSubmission.maxMarks || 1000}
+                        required
+                        value={marks}
+                        onChange={(e) => setMarks(e.target.value)}
+                        placeholder="e.g., 85"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink">Instructor Feedback</label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="Provide constructive feedback for the student..."
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-ink-border bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    type="submit"
+                    variant={gradeStatus === 'APPROVED' ? 'primary' : 'danger'}
+                    size="md"
+                    disabled={grading}
+                    className="font-bold"
+                  >
+                    {grading
+                      ? 'Saving Grade...'
+                      : gradeStatus === 'APPROVED'
+                      ? 'Approve & Save Grade'
+                      : 'Reject Submission'}
+                  </Button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Return Grade Success Modal */}
+      {/* Success Modal */}
       <Modal
-        isOpen={isReturnSuccessModal}
-        onClose={() => setIsReturnSuccessModal(false)}
-        title="Grade Returned Successfully"
-        description={`The grade of ${score} / 20 points and your feedback have been sent to ${currentStudent.name}.`}
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title="Grade Recorded"
+        description="The submission was successfully evaluated and the student's grade record was updated."
       >
-        <div className="pt-4 flex justify-end">
+        <div className="pt-2 flex justify-end">
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsReturnSuccessModal(false)}
+            onClick={() => setIsSuccessModalOpen(false)}
           >
             Done
           </Button>

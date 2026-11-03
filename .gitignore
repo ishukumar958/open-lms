@@ -25,3 +25,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Internal Planning & Status Docs
+api_implementation_plan.md
+what_done_so_far.md
+what_done+so_far.md
+*implementation_plan*.md

@@ -22,7 +22,7 @@ export function LandingPage() {
     <div className="min-h-screen bg-white text-ink flex flex-col">
       {/* Sticky Top Navigation */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center shadow-sm">
@@ -40,7 +40,7 @@ export function LandingPage() {
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <span className="font-extrabold text-xl tracking-tight text-ink">Open LMS</span>
+            <span className="font-extrabold text-lg sm:text-xl tracking-tight text-ink">Open LMS</span>
           </Link>
 
           {/* Navigation Links */}
@@ -60,10 +60,10 @@ export function LandingPage() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             <Link
               to="/login"
-              className="text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-2 py-1"
+              className="text-xs sm:text-sm font-semibold text-ink-muted hover:text-ink transition-colors px-2 py-1"
             >
               Sign in
             </Link>
@@ -71,7 +71,7 @@ export function LandingPage() {
               variant="primary"
               size="md"
               onClick={() => navigate('/choose-role')}
-              className="rounded-full shadow-brand font-semibold text-xs px-5"
+              className="rounded-full shadow-brand font-semibold text-xs px-3 sm:px-5"
             >
               Get started
             </Button>
@@ -81,7 +81,7 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#F2F0FF] via-[#FAF9FF] to-white pt-12 pb-24 border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Left Column: Hero Copy */}
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-brand-200/80 shadow-2xs text-xs font-semibold text-brand-600">

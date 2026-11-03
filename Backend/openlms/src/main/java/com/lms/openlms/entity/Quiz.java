@@ -1,29 +1,61 @@
-
 package com.lms.openlms.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
+@Table(name = "quizzes")
 public class Quiz {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "quiz_id")
+    private Long quizId;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "course_id", nullable = false)
+    private Course course;
+
+    @Column(name = "title", nullable = false, length = 150)
     private String title;
+
+    @Column(name = "total_marks", nullable = false)
     private Integer totalMarks;
-    private Long courseId;
-    private Long createdBy;
+
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
+
+    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<QuizQuestion> questions = new ArrayList<>();
+
+    public Quiz() {}
+
+    public Long getQuizId() {
+        return quizId;
+    }
+
+    public void setQuizId(Long quizId) {
+        this.quizId = quizId;
+    }
 
     public Long getId() {
-        return id;
+        return quizId;
     }
 
     public void setId(Long id) {
-        this.id = id;
+        this.quizId = id;
+    }
+
+    public Course getCourse() {
+        return course;
+    }
+
+    public void setCourse(Course course) {
+        this.course = course;
     }
 
     public String getTitle() {
@@ -42,19 +74,27 @@ public class Quiz {
         this.totalMarks = totalMarks;
     }
 
-    public Long getCourseId() {
-        return courseId;
-    }
-
-    public void setCourseId(Long courseId) {
-        this.courseId = courseId;
-    }
-
-    public Long getCreatedBy() {
+    public User getCreatedBy() {
         return createdBy;
     }
 
-    public void setCreatedBy(Long createdBy) {
+    public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public Integer getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
+    public List<QuizQuestion> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<QuizQuestion> questions) {
+        this.questions = questions;
     }
 }

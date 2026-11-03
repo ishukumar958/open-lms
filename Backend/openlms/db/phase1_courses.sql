@@ -1,0 +1,3 @@
+ALTER TABLE courses
+  ADD COLUMN description TEXT NULL,
+  ADD COLUMN section VARCHAR(50) NOT NULL DEFAULT 'Section 01';

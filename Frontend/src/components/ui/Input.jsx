@@ -42,7 +42,7 @@ export const Input = React.forwardRef(
 Input.displayName = 'Input';
 
 export const PasswordInput = React.forwardRef(
-  ({ className, label, error, ...props }, ref) => {
+  ({ className, label, error, forgotPasswordLink, ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
 
     return (

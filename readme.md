@@ -286,27 +286,38 @@ Ensure you have the following installed on your local machine:
 
 ### 1. Backend Setup (Spring Boot + MySQL)
 
-#### A. Create the Database
-Log in to your local MySQL instance and create the database schema:
+#### A. Create the Database & Apply Migrations
+Log in to your local MySQL instance, create the database, and run the migration scripts in order:
 
 ```sql
-CREATE DATABASE openlms;
+CREATE DATABASE IF NOT EXISTS open_lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-#### B. Configure Database Credentials
-Verify or update the configuration in `Backend/openlms/src/main/resources/application.properties`:
+Run the sequential migration scripts from `Backend/openlms/db/` (see [Backend/openlms/db/README.md](Backend/openlms/db/README.md)):
+1. `phase0_roles.sql`
+2. `phase1_courses.sql`
+3. `phase1_assignments.sql`
+4. `phase2_resources.sql`
+5. `phase2_submissions.sql`
+6. `phase3_quizzes.sql`
+7. `seed_demo.sql`
+
+#### B. Configure Environment Variables
+Set the required environment variables in your shell or `.env` file:
 
 ```properties
-spring.application.name=openlms
-spring.datasource.url=jdbc:mysql://localhost:3306/openlms
-spring.datasource.username=root
-spring.datasource.password=YOUR_MYSQL_PASSWORD
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+# Database
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/open_lms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=root
 
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+# Security
+JWT_SECRET=c3VwZXJzZWNyZXRqd3RrZXlmb3JvcGVubG1zZGV2ZWxvcG1lbnQyMDI2
 
-server.port=8081
+# Cloudinary File Storage
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 #### C. Run the Backend Application
@@ -325,7 +336,7 @@ chmod +x ./mvnw
 ./mvnw spring-boot:run
 ```
 
-The backend server will start on `http://localhost:8081`.
+The backend server will start on `http://localhost:8081` with base path `/api/v1`.
 
 ---
 
@@ -341,12 +352,12 @@ npm install
 
 #### B. Choose Execution Mode (Mock vs Live Backend)
 
-The frontend includes a built-in mock fallback with full student and professor data. You can configure mode via an `.env` file in the `Frontend/` folder:
+Configure execution mode via an `.env` file in the `Frontend/` folder:
 
 ```properties
-# Set to 'true' for offline standalone mode (uses realistic fixtures)
 # Set to 'false' to communicate with the Spring Boot server
-VITE_USE_MOCKS=true
+# Set to 'true' for offline standalone mock mode
+VITE_USE_MOCKS=false
 VITE_API_BASE_URL=http://localhost:8081/api/v1
 ```
 
@@ -357,29 +368,67 @@ npm run dev
 
 Visit **`http://localhost:5173`** in your browser.
 
-#### D. Quick Login Credentials (Demo / Mock Mode)
-- **Student Profile:** Any student email (e.g. `rahul.sharma@geu.edu`) or password.
-- **Faculty Profile:** Include `prof` or `priya` in the email (e.g. `priya.sharma@geu.edu`) to automatically sign in with instructor permissions.
+#### D. Quick Login Credentials (Seed Accounts)
+- **Faculty:** `priya.sharma@geu.edu` / `password123` (Course owner, grading permissions)
+- **Student 1:** `rahul.sharma@geu.edu` / `password123` (Enrolled student with graded coursework)
+- **Student 2:** `neha.patel@geu.edu` / `password123` (Enrolled student with pending submission)
 
 ---
 
 ## 📡 REST API Endpoints
 
-The backend exposes RESTful endpoints for frontend consumption:
+All endpoints are prefixed with `/api/v1`. Unmarked endpoints require a valid JWT (`Authorization: Bearer <token>`).
 
-| Method | Endpoint | Description | Access |
+| Method | Endpoint | Description | Role / Access |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/login` | Authenticate user and issue session token | Public |
-| `GET` | `/api/v1/students` | Retrieve list of all enrolled students | Faculty / Admin |
-| `GET` | `/api/v1/students/{id}` | Retrieve specific student profile | Student / Faculty |
-| `POST` | `/api/v1/students` | Register a new student profile | Public / Admin |
-| `GET` | `/api/v1/courses` | List all available academic courses | Authenticated |
-| `POST` | `/api/v1/courses` | Create a new course syllabus | Faculty |
-| `GET` | `/api/v1/courses/{id}` | Retrieve detailed course curriculum & modules | Authenticated |
-| `GET` | `/api/v1/quizzes/course/{courseId}` | Fetch quizzes associated with a course | Authenticated |
-| `POST` | `/api/v1/quizzes` | Publish an interactive quiz | Faculty |
-| `POST` | `/api/v1/assignments/submit` | Submit student assignment document | Student |
-| `POST` | `/api/v1/grades/rubric` | Submit rubric grading and evaluation feedback | Faculty |
+| **Auth** | | | |
+| `POST` | `/auth/register` | Register new student or faculty account | Public |
+| `POST` | `/auth/login` | Authenticate user and issue signed JWT | Public |
+| `GET` | `/auth/me` | Fetch currently authenticated user session | Authenticated |
+| **Courses** | | | |
+| `POST` | `/courses` | Create a new course (generates class code) | Faculty |
+| `GET` | `/courses/my` | List enrolled or taught courses | Authenticated |
+| `GET` | `/courses/{id}` | Get course detail & syllabus | Member |
+| `PATCH` | `/courses/{id}` | Update course title, description, or section | Course Owner |
+| `DELETE`| `/courses/{id}` | Delete course (if no submissions exist) | Course Owner |
+| `POST` | `/courses/join` | Enroll in course via class code | Student |
+| `DELETE`| `/courses/{id}/leave` | Drop/unenroll from course | Student (Enrolled) |
+| `GET` | `/courses/{id}/students` | List enrolled students | Course Owner |
+| `DELETE`| `/courses/{id}/students/{studentId}` | Remove student from course | Course Owner |
+| **Assignments** | | | |
+| `POST` | `/courses/{courseId}/assignments` | Publish new assignment with attachment | Course Owner |
+| `GET` | `/courses/{courseId}/assignments` | List assignments for course | Member |
+| `GET` | `/assignments/my` | List all assignments with student status | Student |
+| `GET` | `/assignments/{id}` | Get assignment details | Member |
+| `PATCH` | `/assignments/{id}` | Edit assignment due date, marks, text | Course Owner |
+| `DELETE`| `/assignments/{id}` | Delete assignment (if no submissions) | Course Owner |
+| **Submissions & Grading** | | | |
+| `POST` | `/assignments/{id}/submissions` | Submit / resubmit coursework | Student (Enrolled) |
+| `GET` | `/assignments/{id}/submissions/me` | Get student's own submission & marks | Student (Enrolled) |
+| `GET` | `/assignments/{id}/submissions` | Get all submissions for assignment | Course Owner |
+| `GET` | `/submissions/my` | Get all submissions made by student | Student |
+| `GET` | `/submissions` | Faculty global grading queue (filtered) | Faculty |
+| `PATCH` | `/submissions/{id}/grade` | Approve (with marks/feedback) or reject | Course Owner |
+| **Quizzes** | | | |
+| `POST` | `/courses/{courseId}/quizzes` | Create quiz with MCQ questions & options | Course Owner |
+| `GET` | `/courses/{courseId}/quizzes` | List course quizzes with attempt status | Member |
+| `GET` | `/quizzes/{id}` | View quiz (students receive no answers) | Member |
+| `DELETE`| `/quizzes/{id}` | Delete quiz (blocked if attempts exist) | Course Owner |
+| `POST` | `/quizzes/{id}/attempts/start` | Start/resume timed quiz session | Student (Enrolled) |
+| `POST` | `/quizzes/{id}/attempts/submit` | Submit answers and trigger auto-grade | Student (Enrolled) |
+| `GET` | `/quizzes/{id}/attempts/me` | View own score and answer review | Student (Enrolled) |
+| `GET` | `/quizzes/{id}/attempts` | List all student attempts & scores | Course Owner |
+| **Resources** | | | |
+| `POST` | `/courses/{courseId}/resources` | Upload/link course study material | Course Owner |
+| `GET` | `/courses/{courseId}/resources` | List all course study materials | Member |
+| `DELETE`| `/resources/{id}` | Delete course resource | Course Owner |
+| **Dashboards & Gradebook** | | | |
+| `GET` | `/dashboard/student` | Aggregated student stats & deadlines | Student |
+| `GET` | `/dashboard/professor` | Aggregated teaching KPIs & grading queue | Faculty |
+| `GET` | `/courses/{courseId}/gradebook` | Full course gradebook matrix | Course Owner |
+| `GET` | `/courses/{courseId}/grades/me` | Student's grade summary for course | Student (Enrolled) |
+| **Files** | | | |
+| `POST` | `/files/upload` | Upload asset to Cloudinary (10MB limit) | Authenticated |
 
 ---
 
@@ -400,7 +449,7 @@ Developed as part of the **MCA 3rd Semester Project-Based Learning (PBL)** curri
 ### 🌟 Core Contributors
 - **Navdeep Bhatt** ([@Navdeepbhatt08](https://github.com/Navdeepbhatt08))
 - **Mayank Kumar** ([@mayank78geu](https://github.com/mayank78geu))
-- **Jatin Kadiyan**
+- **Jatin Kadiyan**([@jkadiyan](https://github.com/jkadiyan))
 - **Ishu Kumar** ([@ishukumar958](https://github.com/ishukumar958))
 
 ---

@@ -1,0 +1,1 @@
+INSERT IGNORE INTO roles (role_name) VALUES ('STUDENT'), ('FACULTY');

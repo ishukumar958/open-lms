@@ -8,6 +8,7 @@ class OpenlmsApplicationTests {
 
 	@Test
 	void contextLoads() {
+		
 	}
 
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuthStore } from '../store/authStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,6 +12,10 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }) {
+  React.useEffect(() => {
+    useAuthStore.getState().initAuth();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}

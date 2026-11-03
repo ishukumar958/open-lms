@@ -1,0 +1,5 @@
+ALTER TABLE quizzes ADD COLUMN duration_minutes INT NULL;
+ALTER TABLE quiz_attempts
+  ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'IN_PROGRESS',
+  ADD COLUMN started_at DATETIME NULL,
+  ADD COLUMN submitted_at DATETIME NULL;
