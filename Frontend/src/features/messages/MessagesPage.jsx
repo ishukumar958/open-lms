@@ -789,6 +789,36 @@ export function MessagesPage() {
                 </div>
               </div>
 
+              {/* WhatsApp In-Chat Search Input Bar */}
+              {isChatSearchOpen && (
+                <div className="bg-slate-50 border-b border-ink-border px-4 py-2 flex items-center gap-2 shrink-0 animate-in fade-in duration-150">
+                  <Search className="w-4 h-4 text-ink-muted shrink-0" />
+                  <input
+                    type="text"
+                    value={chatSearchQuery}
+                    onChange={(e) => setChatSearchQuery(e.target.value)}
+                    placeholder="Search in this conversation..."
+                    className="flex-1 bg-transparent text-xs text-ink focus:outline-none"
+                    autoFocus
+                  />
+                  {chatSearchQuery && (
+                    <span className="text-[10px] text-ink-muted font-semibold shrink-0">
+                      {messages.filter(m => m.messageContent?.toLowerCase().includes(chatSearchQuery.toLowerCase())).length} found
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatSearchQuery('');
+                      setIsChatSearchOpen(false);
+                    }}
+                    className="text-ink-muted hover:text-ink p-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Pinned Announcements Collapsible Banner */}
               {pinnedMessages.length > 0 && (
                 <div className="bg-amber-50/70 border-b border-amber-200/80 px-4 py-2 flex items-center justify-between text-xs text-amber-900 shrink-0">
@@ -811,7 +841,7 @@ export function MessagesPage() {
               )}
 
               {/* Message Feed Area */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 space-y-4 bg-slate-50/30">
+              <div ref={chatScrollContainerRef} onScroll={handleChatScroll} className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 space-y-4 bg-slate-50/40 relative">
                 {loadingMessages ? (
                   <div className="flex items-center justify-center h-full text-xs text-ink-muted">
                     Loading conversation history...

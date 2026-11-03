@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { listMyGroups } from '../../lib/api/chatApi';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -27,21 +28,44 @@ export function Sidebar() {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUnread = () => {
+      listMyGroups()
+        .then((groups) => {
+          if (!mounted || !Array.isArray(groups)) return;
+          const total = groups.reduce((acc, g) => acc + (g.unreadCount || 0), 0);
+          setUnreadChatCount(total);
+        })
+        .catch(() => {});
+    };
+
+    fetchUnread();
+    const handleReadEvent = () => fetchUnread();
+    window.addEventListener('chat_read_updated', handleReadEvent);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('chat_read_updated', handleReadEvent);
+    };
+  }, [user?.id]);
 
   const studentNav = [
     { label: 'Home', to: '/student/home', icon: Home },
     { label: 'My classes', to: '/student/classes', icon: BookOpen },
     { label: 'Calendar', to: '/student/calendar', icon: Calendar },
     { label: 'Assignments', to: '/student/assignments', icon: FileCheck2 },
-    { label: 'Messages', to: '/messages', icon: MessageSquare, badge: 2 },
+    { label: 'Messages', to: '/messages', icon: MessageSquare, badge: unreadChatCount > 0 ? unreadChatCount : undefined },
   ];
 
   const professorNav = [
     { label: 'Overview', to: '/professor/overview', icon: LayoutDashboard },
     { label: 'My courses', to: '/professor/courses', icon: Layers },
-    { label: 'Submissions', to: '/professor/submissions', icon: Inbox, badge: 12 },
+    { label: 'Submissions', to: '/professor/submissions', icon: Inbox },
     { label: 'Gradebook', to: '/professor/gradebook', icon: Award },
-    { label: 'Messages', to: '/messages', icon: MessageSquare },
+    { label: 'Messages', to: '/messages', icon: MessageSquare, badge: unreadChatCount > 0 ? unreadChatCount : undefined },
   ];
 
   const navItems = isProf ? professorNav : studentNav;
