@@ -133,6 +133,15 @@ public class ChatController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @DeleteMapping("/groups/{groupId}/messages/{messageId}")
+    public ResponseEntity<Void> deleteMessage(
+            @PathVariable Long groupId,
+            @PathVariable Long messageId,
+            @AuthenticationPrincipal AuthUser user) {
+        chatService.deleteMessage(groupId, messageId, user.userId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/groups/{groupId}/read")
     public ResponseEntity<Void> markAsRead(
             @PathVariable Long groupId,

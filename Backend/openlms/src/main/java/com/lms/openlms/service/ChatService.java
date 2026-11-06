@@ -359,6 +359,22 @@ public class ChatService {
         return response;
     }
 
+    public void deleteMessage(Long groupId, Long messageId, Long deletingUserId) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!message.getGroup().getGroupId().equals(groupId)) {
+            throw new BadRequestException("Message does not belong to this group");
+        }
+
+        if (!message.getSender().getUserId().equals(deletingUserId)) {
+            throw new ForbiddenException("You can only delete your own messages");
+        }
+
+        chatMessageRepository.delete(message);
+        broadcastGroupUpdate(groupId, "MESSAGE_DELETED", Map.of("messageId", messageId));
+    }
+
     public void markGroupAsRead(Long groupId, Long studentId) {
         chatGroupMemberRepository.findByGroupGroupIdAndStudentUserId(groupId, studentId)
                 .ifPresent(m -> {
