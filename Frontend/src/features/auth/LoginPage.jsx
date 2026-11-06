@@ -9,7 +9,15 @@ import { Check, ShieldCheck, Sparkles } from 'lucide-react';
 export function LoginPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login, googleLogin } = useAuthStore();
+  const { login, googleLogin, isAuthenticated, user, role } = useAuthStore();
+
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      const isProf = role === 'PROFESSOR' || role === 'FACULTY' || user?.role === 'PROFESSOR' || user?.role === 'FACULTY';
+      const redirect = searchParams.get('redirect');
+      navigate(redirect || (isProf ? '/professor/overview' : '/student/home'), { replace: true });
+    }
+  }, [isAuthenticated, user, role, navigate, searchParams]);
 
   const allowedDomain = import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN;
   const defaultDomain = allowedDomain || 'geu.edu';

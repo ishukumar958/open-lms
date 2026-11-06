@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   Printer,
   ShieldCheck,
+  RotateCcw,
 } from 'lucide-react';
 
 export function QuizTakingPage() {
@@ -44,6 +45,8 @@ export function QuizTakingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [reviewResult, setReviewResult] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+
+  const isInitialMount = useRef(true);
 
   // Load quiz and attempt state
   useEffect(() => {
@@ -66,12 +69,14 @@ export function QuizTakingPage() {
         try {
           attemptData = await startQuizAttempt(quizId);
         } catch (startErr) {
-          // If already submitted (409), fetch attempt review
-          if (startErr.status === 409 || startErr.message?.includes('already')) {
+          // If already submitted (409) or maximum attempts reached
+          if (startErr.status === 409 || startErr.message?.includes('already') || startErr.message?.includes('Maximum')) {
             const myAttempt = await getMyQuizAttempt(quizId);
             if (mounted) {
               setAttempt(myAttempt);
               setReviewResult(myAttempt);
+              const pct = Math.round(((myAttempt?.score || 0) / (myAttempt?.totalMarks || quizData?.totalMarks || 1)) * 100);
+              setIsCertificateOpen(pct >= 50);
               setLoading(false);
             }
             return;
@@ -87,10 +92,34 @@ export function QuizTakingPage() {
           const myAttempt = await getMyQuizAttempt(quizId);
           if (mounted) {
             setReviewResult(myAttempt);
+            const pct = Math.round(((myAttempt?.score || 0) / (myAttempt?.totalMarks || quizData?.totalMarks || 1)) * 100);
+            setIsCertificateOpen(pct >= 50);
           }
-        } else if (attemptData.endsAt) {
-          const diffMs = new Date(attemptData.endsAt).getTime() - Date.now();
-          setTimeLeft(Math.max(0, Math.floor(diffMs / 1000)));
+        } else {
+          // Reliable timeLeft calculation: NEVER let it be 0 on fresh start
+          const durationMinutes = attemptData.durationMinutes || quizData.durationMinutes || 15;
+          let calculatedSeconds = durationMinutes * 60;
+
+          if (attemptData.startedAt && attemptData.endsAt) {
+            const parseDate = (d) => {
+              if (!d) return null;
+              const s = String(d);
+              return new Date(s.endsWith('Z') || /[+-]\d{2}(:\d{2})?$/.test(s) ? s : s + 'Z').getTime();
+            };
+            const startedMs = parseDate(attemptData.startedAt);
+            const endsMs = parseDate(attemptData.endsAt) || (startedMs + durationMinutes * 60 * 1000);
+            const nowMs = Date.now();
+            const remainingSec = Math.floor((endsMs - nowMs) / 1000);
+
+            // If remainingSec is a plausible active timer, use it
+            if (remainingSec > 10 && remainingSec <= durationMinutes * 60 + 120) {
+              calculatedSeconds = remainingSec;
+            } else {
+              calculatedSeconds = durationMinutes * 60;
+            }
+          }
+
+          setTimeLeft(calculatedSeconds);
         }
 
         setLoading(false);
@@ -112,6 +141,16 @@ export function QuizTakingPage() {
   // Timer countdown
   useEffect(() => {
     if (reviewResult || timeLeft === null) return;
+
+    // Safety guard: do not auto-submit on the very first frame
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (timeLeft <= 0) {
+        setTimeLeft((quiz?.durationMinutes || 15) * 60);
+        return;
+      }
+    }
+
     if (timeLeft <= 0) {
       handleSubmit(true);
       return;
@@ -178,18 +217,43 @@ export function QuizTakingPage() {
       const res = await submitQuizAttempt(quizId, { answers: payloadAnswers });
       setReviewResult(res);
       setAttempt(res);
-      setIsCertificateOpen(true);
+      const pct = Math.round(((res.score || 0) / (res.totalMarks || quiz?.totalMarks || 1)) * 100);
+      // ONLY give/open certificate if score is >= 50%
+      setIsCertificateOpen(pct >= 50);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
-      // If error is already submitted, load review
       try {
         const myAttempt = await getMyQuizAttempt(quizId);
         setReviewResult(myAttempt);
+        const pct = Math.round(((myAttempt?.score || 0) / (myAttempt?.totalMarks || quiz?.totalMarks || 1)) * 100);
+        setIsCertificateOpen(pct >= 50);
       } catch (e) {
         alert(err.message || 'Failed to submit quiz');
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRetakeQuiz = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setReviewResult(null);
+      setAnswers({});
+      setFlagged({});
+      setCurrentIdx(0);
+      setIsCertificateOpen(false);
+
+      const newAttempt = await startQuizAttempt(quizId);
+      setAttempt(newAttempt);
+      const durationMinutes = newAttempt.durationMinutes || quiz?.durationMinutes || 15;
+      setTimeLeft(durationMinutes * 60);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to retake quiz:', err);
+      alert(err.message || 'Unable to start retake attempt. Maximum attempts may be reached.');
+      setLoading(false);
     }
   };
 
@@ -234,17 +298,25 @@ export function QuizTakingPage() {
   // Review helper for current question
   const reviewAnswer = reviewResult?.answers?.find((a) => a.questionId === currentQ?.questionId);
   const scorePercent = reviewResult
-    ? Math.round(((reviewResult.score || 0) / (reviewResult.totalMarks || 1)) * 100)
+    ? Math.round(((reviewResult.score || 0) / (reviewResult.totalMarks || quiz.totalMarks || 1)) * 100)
     : 0;
-  const handlePrintCertificate = () => printCompletionCertificate({
-    studentName: user?.name,
-    courseName: quiz.courseName,
-    courseCode: quiz.courseCode,
-    quizTitle: quiz.title,
-    score: reviewResult?.score,
-    totalMarks: reviewResult?.totalMarks || quiz.totalMarks,
-    submittedAt: reviewResult?.submittedAt,
-  });
+  const isPassed = reviewResult ? scorePercent >= 50 : false;
+  const maxAttempts = 2;
+  const attemptsUsed = reviewResult?.attemptsUsed ?? (reviewResult ? 1 : 0);
+  const attemptsLeft = reviewResult?.attemptsLeft ?? Math.max(0, maxAttempts - attemptsUsed);
+
+  const handlePrintCertificate = () => {
+    if (!isPassed) return;
+    printCompletionCertificate({
+      studentName: user?.name,
+      courseName: quiz.courseName,
+      courseCode: quiz.courseCode,
+      quizTitle: quiz.title,
+      score: reviewResult?.score,
+      totalMarks: reviewResult?.totalMarks || quiz.totalMarks,
+      submittedAt: reviewResult?.submittedAt,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-page flex flex-col select-none">
@@ -276,8 +348,8 @@ export function QuizTakingPage() {
 
         <div className="flex items-center gap-4">
           {reviewResult ? (
-            <Badge variant="success" size="sm" className="font-bold">
-              Score: {reviewResult.score} / {reviewResult.totalMarks}
+            <Badge variant={isPassed ? 'success' : 'danger'} size="sm" className="font-bold">
+              {isPassed ? 'Passed' : 'Failed'}: {reviewResult.score} / {reviewResult.totalMarks || quiz.totalMarks} ({scorePercent}%)
             </Badge>
           ) : timeLeft !== null ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-ink font-mono text-xs font-bold">
@@ -305,34 +377,63 @@ export function QuizTakingPage() {
 
       {/* Review mode top banner */}
       {reviewResult && (
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 sm:px-10 py-3 flex items-center justify-between">
+        <div
+          className={cn(
+            'border-b px-6 sm:px-10 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3',
+            isPassed ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
+          )}
+        >
           <div className="flex items-center gap-3">
-            <Award className="w-5 h-5 text-emerald-600" />
+            {isPassed ? (
+              <Award className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+            )}
             <div>
-              <p className="text-xs font-bold text-emerald-900">
-                Quiz Completed · Final Score: {reviewResult.score} / {reviewResult.totalMarks} (
-                {scorePercent}%)
+              <p className={cn('text-xs font-bold', isPassed ? 'text-emerald-900' : 'text-rose-900')}>
+                {isPassed
+                  ? `Assessment Passed · Final Score: ${reviewResult.score} / ${reviewResult.totalMarks || quiz.totalMarks} (${scorePercent}%)`
+                  : `Assessment Failed · Final Score: ${reviewResult.score} / ${reviewResult.totalMarks || quiz.totalMarks} (${scorePercent}%)`}
               </p>
-              <p className="text-[11px] text-emerald-700">
-                Review your responses and correct answers below.
+              <p className={cn('text-[11px]', isPassed ? 'text-emerald-700' : 'text-rose-700 font-medium')}>
+                {isPassed
+                  ? 'Congratulations! You scored 50% or higher and successfully passed.'
+                  : attemptsLeft === 1
+                  ? 'Passing grade is 50%. Certificate is not awarded. Only 1 attempt is left.'
+                  : 'Passing grade is 50%. Certificate is not awarded. No attempts remaining.'}
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={ShieldCheck}
-            onClick={() => setIsCertificateOpen(true)}
-          >
-            View certificate
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/student/classes/${courseId}`)}
-          >
-            Back to Class
-          </Button>
+          <div className="flex items-center gap-2">
+            {isPassed && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ShieldCheck}
+                onClick={() => setIsCertificateOpen(true)}
+              >
+                View certificate
+              </Button>
+            )}
+            {!isPassed && attemptsLeft > 0 && (
+              <Button
+                variant="primary"
+                size="sm"
+                icon={RotateCcw}
+                onClick={handleRetakeQuiz}
+                className="bg-brand-600 hover:bg-brand-700 font-bold"
+              >
+                Retake Quiz (1 attempt left)
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/student/classes/${courseId}`)}
+            >
+              Back to Class
+            </Button>
+          </div>
         </div>
       )}
 
@@ -557,12 +658,21 @@ export function QuizTakingPage() {
           {/* Right Pane (3 cols): Summary Card */}
           <div className="lg:col-span-3 bg-navy-900 text-white rounded-2xl p-6 shadow-card border border-navy-800 space-y-6">
             <div>
-              <h3 className="text-base font-bold text-white mb-2">
-                {reviewResult ? 'Assessment summary' : 'Before you submit'}
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-bold text-white">
+                  {reviewResult ? 'Assessment summary' : 'Before you submit'}
+                </h3>
+                {reviewResult && (
+                  <Badge variant={isPassed ? 'success' : 'danger'} size="xs" className="font-bold">
+                    {isPassed ? 'PASSED (≥50%)' : 'FAILED (<50%)'}
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-slate-300 leading-relaxed">
                 {reviewResult
-                  ? `You scored ${reviewResult.score} out of ${reviewResult.totalMarks} possible marks (${scorePercent}%).`
+                  ? isPassed
+                    ? `You passed with ${reviewResult.score} out of ${reviewResult.totalMarks || quiz.totalMarks} possible marks (${scorePercent}%).`
+                    : `You scored ${reviewResult.score} out of ${reviewResult.totalMarks || quiz.totalMarks} possible marks (${scorePercent}%). Passing score is 50%.`
                   : `You've answered ${answeredCount} of ${questions.length} questions. Unanswered questions will receive 0 marks.`}
               </p>
             </div>
@@ -576,6 +686,22 @@ export function QuizTakingPage() {
                 <span className="text-slate-400">Answered</span>
                 <span className="font-bold text-emerald-400">{answeredCount}</span>
               </div>
+              {reviewResult && (
+                <>
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-navy-800">
+                    <span className="text-slate-400">Result</span>
+                    <span className={cn('font-bold', isPassed ? 'text-emerald-400' : 'text-rose-400')}>
+                      {isPassed ? 'Passed' : 'Failed'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-navy-800">
+                    <span className="text-slate-400">Attempts</span>
+                    <span className="font-bold text-slate-200">
+                      {attemptsUsed} of {maxAttempts} used ({attemptsLeft} left)
+                    </span>
+                  </div>
+                </>
+              )}
               {!reviewResult && (
                 <>
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-navy-800">
@@ -591,14 +717,38 @@ export function QuizTakingPage() {
             </div>
 
             {reviewResult ? (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => navigate(`/student/classes/${courseId}`)}
-                className="w-full font-bold shadow-md"
-              >
-                Return to Course
-              </Button>
+              <div className="space-y-2.5">
+                {!isPassed && attemptsLeft > 0 && (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    icon={RotateCcw}
+                    onClick={handleRetakeQuiz}
+                    className="w-full font-bold shadow-md bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    Retake Quiz (1 attempt left)
+                  </Button>
+                )}
+                {isPassed && (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    icon={ShieldCheck}
+                    onClick={() => setIsCertificateOpen(true)}
+                    className="w-full font-bold shadow-md"
+                  >
+                    View Certificate
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => navigate(`/student/classes/${courseId}`)}
+                  className="w-full text-slate-200 hover:text-white border-navy-700 hover:bg-navy-800 font-semibold"
+                >
+                  Return to Course
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="primary"
@@ -685,7 +835,8 @@ export function QuizTakingPage() {
         </div>
       </Modal>
 
-      {reviewResult && (
+      {/* Certificate modal - strictly only if passed (>= 50%) */}
+      {reviewResult && isPassed && (
         <Modal
           isOpen={isCertificateOpen}
           onClose={() => setIsCertificateOpen(false)}
@@ -718,7 +869,7 @@ export function QuizTakingPage() {
                   <div className="rounded-xl border border-brand-100 bg-white/80 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Score</p>
                     <p className="mt-1 text-lg font-bold text-brand-700">
-                      {reviewResult.score} / {reviewResult.totalMarks}
+                      {reviewResult.score} / {reviewResult.totalMarks || quiz.totalMarks}
                     </p>
                   </div>
                   <div className="rounded-xl border border-brand-100 bg-white/80 p-3">

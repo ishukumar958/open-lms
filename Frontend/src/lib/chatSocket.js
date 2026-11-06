@@ -2,6 +2,20 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { authStorage } from './auth';
 
+export function getWsBaseUrl() {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL.replace(/\/$/, '');
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
+  if (apiBase) {
+    return apiBase.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://open-lms.onrender.com';
+  }
+  return 'http://localhost:8081';
+}
+
 class ChatSocketService {
   constructor() {
     this.client = null;
@@ -17,17 +31,18 @@ class ChatSocketService {
     }
 
     const token = authStorage.getToken();
-    const wsBaseUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8081';
+    const wsBaseUrl = getWsBaseUrl();
+    const sockJsUrl = `${wsBaseUrl}/ws/chat`;
 
     this.client = new Client({
-      webSocketFactory: () => new SockJS(`${wsBaseUrl}/ws/chat`),
+      webSocketFactory: () => new SockJS(sockJsUrl),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       debug: (str) => {
         if (import.meta.env.DEV) {
           // console.debug('[STOMP]', str);
         }
       },
-      reconnectDelay: 4000,
+      reconnectDelay: 3000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
@@ -46,7 +61,12 @@ class ChatSocketService {
         this.notifyStatus(false);
       },
       onStompError: (frame) => {
-        console.error('[STOMP Error]', frame.headers['message'], frame.body);
+        console.error('[STOMP Error]', frame.headers?.['message'], frame.body);
+        this.connected = false;
+        this.notifyStatus(false);
+      },
+      onWebSocketError: (err) => {
+        console.warn('[WebSocket Error]', err);
         this.connected = false;
         this.notifyStatus(false);
       },
@@ -72,7 +92,7 @@ class ChatSocketService {
     }
   }
 
-  // Force-reconnect with the current token (e.g. after login / user switch)
+  // Force-reconnect with current token (e.g. after login / user switch)
   reconnect() {
     this.disconnect();
     setTimeout(() => this.connect(), 100);

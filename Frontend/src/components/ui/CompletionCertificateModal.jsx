@@ -22,6 +22,10 @@ export function printCompletionCertificate({
   submittedAt,
 }) {
   const scorePercent = Math.round(((score || 0) / (totalMarks || 1)) * 100);
+  if (scorePercent < 50) {
+    alert('Certificate is only available for scores of 50% or higher.');
+    return;
+  }
   const completionDate = submittedAt
     ? new Date(submittedAt).toLocaleDateString([], {
         year: 'numeric',
@@ -146,6 +150,7 @@ export function CompletionCertificateModal({
   if (!quiz) return null;
 
   const scorePercent = Math.round(((quiz.score || 0) / (quiz.totalMarks || 1)) * 100);
+  if (scorePercent < 50) return null;
   const completionDate = submittedAt
     ? new Date(submittedAt).toLocaleDateString([], {
         year: 'numeric',

@@ -396,6 +396,38 @@ public class ChatService {
         }
     }
 
+    @Transactional
+    public void deleteMessage(Long groupId, Long messageId, AuthUser user) {
+        requireAccess(groupId, user);
+
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!message.getGroup().getGroupId().equals(groupId)) {
+            throw new BadRequestException("Message does not belong to this group");
+        }
+
+        if (message.getDeletedAt() != null) {
+            return;
+        }
+
+        boolean isTeacher = "FACULTY".equalsIgnoreCase(user.role()) || "PROFESSOR".equalsIgnoreCase(user.role());
+        boolean isSender = message.getSender().getUserId().equals(user.userId());
+
+        if (!isTeacher && !isSender) {
+            throw new ForbiddenException("You can only delete your own messages");
+        }
+
+        message.setDeletedAt(LocalDateTime.now());
+        chatMessageRepository.save(message);
+
+        // Broadcast MESSAGE_DELETED to all group members
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messageId", messageId);
+        payload.put("groupId", groupId);
+        broadcastGroupUpdate(groupId, "MESSAGE_DELETED", payload);
+    }
+
     // -------------------------------------------------------------
     // Helper Methods & Security Verification
     // -------------------------------------------------------------

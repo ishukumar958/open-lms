@@ -389,6 +389,9 @@ public class QuizDto {
         private LocalDateTime startedAt;
         private Integer durationMinutes;
         private LocalDateTime endsAt;
+        private Integer attemptsUsed;
+        private Integer attemptsLeft;
+        private Integer maxAttempts;
 
         public StartAttemptResponse() {}
 
@@ -447,6 +450,30 @@ public class QuizDto {
 
         public void setEndsAt(LocalDateTime endsAt) {
             this.endsAt = endsAt;
+        }
+
+        public Integer getAttemptsUsed() {
+            return attemptsUsed;
+        }
+
+        public void setAttemptsUsed(Integer attemptsUsed) {
+            this.attemptsUsed = attemptsUsed;
+        }
+
+        public Integer getAttemptsLeft() {
+            return attemptsLeft;
+        }
+
+        public void setAttemptsLeft(Integer attemptsLeft) {
+            this.attemptsLeft = attemptsLeft;
+        }
+
+        public Integer getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(Integer maxAttempts) {
+            this.maxAttempts = maxAttempts;
         }
     }
 
@@ -575,6 +602,9 @@ public class QuizDto {
         private LocalDateTime startedAt;
         private LocalDateTime submittedAt;
         private List<AttemptAnswerDetail> answers;
+        private Integer attemptsUsed;
+        private Integer attemptsLeft;
+        private Integer maxAttempts;
 
         public AttemptResultResponse() {}
 
@@ -640,6 +670,30 @@ public class QuizDto {
 
         public void setAnswers(List<AttemptAnswerDetail> answers) {
             this.answers = answers;
+        }
+
+        public Integer getAttemptsUsed() {
+            return attemptsUsed;
+        }
+
+        public void setAttemptsUsed(Integer attemptsUsed) {
+            this.attemptsUsed = attemptsUsed;
+        }
+
+        public Integer getAttemptsLeft() {
+            return attemptsLeft;
+        }
+
+        public void setAttemptsLeft(Integer attemptsLeft) {
+            this.attemptsLeft = attemptsLeft;
+        }
+
+        public Integer getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(Integer maxAttempts) {
+            this.maxAttempts = maxAttempts;
         }
     }
 

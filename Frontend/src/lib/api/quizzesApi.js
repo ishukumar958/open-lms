@@ -89,7 +89,15 @@ export async function deleteQuiz(quizId) {
 
 export async function startQuizAttempt(quizId) {
   if (useMocks) {
-    return {
+    const key = `openlms_mock_quiz_attempts_${quizId}`;
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    const inProgress = stored.find(a => a.status === 'IN_PROGRESS');
+    if (inProgress) return inProgress;
+    const submittedCount = stored.filter(a => a.status === 'SUBMITTED').length;
+    if (submittedCount >= 2) {
+      throw { status: 409, message: 'Maximum attempts reached (2/2)' };
+    }
+    const newAttempt = {
       attemptId: Date.now(),
       quizId: Number(quizId),
       studentId: 1,
@@ -97,7 +105,14 @@ export async function startQuizAttempt(quizId) {
       submittedAt: null,
       score: null,
       status: 'IN_PROGRESS',
+      durationMinutes: 15,
+      attemptsUsed: submittedCount,
+      attemptsLeft: Math.max(0, 2 - submittedCount),
+      maxAttempts: 2,
     };
+    stored.push(newAttempt);
+    localStorage.setItem(key, JSON.stringify(stored));
+    return newAttempt;
   }
   return apiRequest(`/quizzes/${quizId}/attempts/start`, {
     method: 'POST',
@@ -106,15 +121,42 @@ export async function startQuizAttempt(quizId) {
 
 export async function submitQuizAttempt(quizId, data) {
   if (useMocks) {
-    return {
-      attemptId: Date.now(),
+    const key = `openlms_mock_quiz_attempts_${quizId}`;
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    const attempt = stored.find(a => a.status === 'IN_PROGRESS') || stored[stored.length - 1];
+    
+    const answers = data?.answers || [];
+    const score = answers.length > 0 ? answers.length : 0;
+    const totalMarks = 5;
+    const submittedCount = stored.filter(a => a.status === 'SUBMITTED').length + 1;
+    
+    const submittedAttempt = {
+      attemptId: attempt?.attemptId || Date.now(),
       quizId: Number(quizId),
       studentId: 1,
-      startedAt: new Date(Date.now() - 600000).toISOString(),
+      startedAt: attempt?.startedAt || new Date(Date.now() - 600000).toISOString(),
       submittedAt: new Date().toISOString(),
-      score: 18,
+      score,
+      totalMarks,
       status: 'SUBMITTED',
+      attemptsUsed: Math.min(2, submittedCount),
+      attemptsLeft: Math.max(0, 2 - submittedCount),
+      maxAttempts: 2,
+      answers: answers.map(a => ({
+        questionId: a.questionId,
+        selectedOptionId: a.selectedOptionId,
+        correctOptionId: a.selectedOptionId,
+        isCorrect: true,
+      })),
     };
+    
+    if (attempt) {
+      Object.assign(attempt, submittedAttempt);
+    } else {
+      stored.push(submittedAttempt);
+    }
+    localStorage.setItem(key, JSON.stringify(stored));
+    return submittedAttempt;
   }
   return apiRequest(`/quizzes/${quizId}/attempts/submit`, {
     method: 'POST',
@@ -124,14 +166,22 @@ export async function submitQuizAttempt(quizId, data) {
 
 export async function getMyQuizAttempt(quizId) {
   if (useMocks) {
+    const key = `openlms_mock_quiz_attempts_${quizId}`;
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    const latest = stored[stored.length - 1];
+    if (latest) return latest;
     return {
       attemptId: 301,
       quizId: Number(quizId),
       studentId: 1,
-      startedAt: '2026-10-18T10:00:00',
-      submittedAt: '2026-10-18T10:22:00',
-      score: 18,
+      startedAt: new Date(Date.now() - 600000).toISOString(),
+      submittedAt: new Date().toISOString(),
+      score: 0,
+      totalMarks: 5,
       status: 'SUBMITTED',
+      attemptsUsed: 1,
+      attemptsLeft: 1,
+      maxAttempts: 2,
     };
   }
   return apiRequest(`/quizzes/${quizId}/attempts/me`);

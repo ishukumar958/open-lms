@@ -151,41 +151,64 @@ export function GradesTab({ courseId, course }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {quizzes.map((q) => (
-                  <tr key={q.quizId} className="hover:bg-slate-50/70">
-                    <td className="py-3 font-semibold text-ink">{q.title}</td>
-                    <td className="py-3">
-                      <Badge
-                        variant={q.status === 'SUBMITTED' ? 'success' : 'default'}
-                        size="xs"
-                      >
-                        {q.status || 'NOT ATTEMPTED'}
-                      </Badge>
-                    </td>
-                    <td className="py-3 font-bold text-ink">
-                      {q.score != null ? (
-                        <span className="text-emerald-700">
-                          {q.score} / {q.totalMarks}
-                        </span>
-                      ) : (
-                        <span className="text-ink-muted font-normal">-- / {q.totalMarks}</span>
-                      )}
-                    </td>
-                    <td className="py-3">
-                      {q.status === 'SUBMITTED' && q.score != null ? (
-                        <button
-                          type="button"
-                          onClick={() => setCertificateQuiz(q)}
-                          className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                {quizzes.map((q) => {
+                  const pct = q.totalMarks > 0 && q.score != null ? Math.round((q.score / q.totalMarks) * 100) : 0;
+                  const isSubmitted = q.status === 'SUBMITTED';
+                  const isPassed = isSubmitted && pct >= 50;
+                  const isFailed = isSubmitted && pct < 50;
+
+                  return (
+                    <tr key={q.quizId} className="hover:bg-slate-50/70">
+                      <td className="py-3 font-semibold text-ink">{q.title}</td>
+                      <td className="py-3">
+                        <Badge
+                          variant={
+                            isPassed
+                              ? 'success'
+                              : isFailed
+                              ? 'rose'
+                              : q.status === 'IN_PROGRESS'
+                              ? 'warning'
+                              : 'default'
+                          }
+                          size="xs"
                         >
-                          View certificate
-                        </button>
-                      ) : (
-                        <span className="text-ink-muted">--</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {isPassed
+                            ? `Passed (${pct}%)`
+                            : isFailed
+                            ? `Failed (${pct}%)`
+                            : q.status || 'NOT ATTEMPTED'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 font-bold text-ink">
+                        {q.score != null ? (
+                          <span className={isPassed ? 'text-emerald-700' : 'text-rose-600'}>
+                            {q.score} / {q.totalMarks} ({pct}%)
+                          </span>
+                        ) : (
+                          <span className="text-ink-muted font-normal">-- / {q.totalMarks}</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {isPassed ? (
+                          <button
+                            type="button"
+                            onClick={() => setCertificateQuiz(q)}
+                            className="text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                          >
+                            View certificate
+                          </button>
+                        ) : isFailed ? (
+                          <span className="text-xs font-medium text-rose-500">
+                            Failed (&lt; 50%) — No certificate
+                          </span>
+                        ) : (
+                          <span className="text-ink-muted">--</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
